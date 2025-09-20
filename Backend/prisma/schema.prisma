@@ -1,0 +1,439 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+enum UserRole {
+  ADMIN
+  INVOICING_USER
+  CONTACT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  loginId   String     @unique @map("login_id")
+  password  String
+  name      String
+  role      UserRole   @default(INVOICING_USER)
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  contacts Contact[]
+
+  @@map("users")
+}
+
+// Contact Master
+enum ContactType {
+  CUSTOMER
+  VENDOR
+  BOTH
+}
+
+model Contact {
+  id          String      @id @default(cuid())
+  name        String
+  type        ContactType
+  email       String?
+  mobile      String?
+  city        String?
+  state       String?
+  pincode     String?
+  address     String?
+  profileImage String?    @map("profile_image")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  createdById String      @map("created_by_id")
+
+  // Relations
+  createdBy           User                 @relation(fields: [createdById], references: [id])
+  purchaseOrders      PurchaseOrder[]
+  salesOrders         SalesOrder[]
+  vendorBills         VendorBill[]
+  customerInvoices    CustomerInvoice[]
+  billPayments        BillPayment[]
+  invoicePayments     InvoicePayment[]
+  ledgerEntries       LedgerEntry[]
+
+  @@map("contacts")
+}
+
+// Product Master
+enum ProductType {
+  GOODS
+  SERVICE
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  name          String
+  type          ProductType
+  salesPrice    Decimal     @map("sales_price") @db.Decimal(10, 2)
+  purchasePrice Decimal     @map("purchase_price") @db.Decimal(10, 2)
+  salesTaxPercent Decimal?  @map("sales_tax_percent") @db.Decimal(5, 2)
+  purchaseTaxPercent Decimal? @map("purchase_tax_percent") @db.Decimal(5, 2)
+  hsnCode       String?     @map("hsn_code")
+  category      String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  purchaseOrderItems PurchaseOrderItem[]
+  salesOrderItems    SalesOrderItem[]
+  vendorBillItems    VendorBillItem[]
+  customerInvoiceItems CustomerInvoiceItem[]
+  stockMovements     StockMovement[]
+
+  @@map("products")
+}
+
+// Tax Master
+enum TaxComputationMethod {
+  PERCENTAGE
+  FIXED_VALUE
+}
+
+model Tax {
+  id                String                @id @default(cuid())
+  name              String
+  computationMethod TaxComputationMethod  @map("computation_method")
+  rate              Decimal               @db.Decimal(10, 2)
+  applicableOnSales Boolean              @default(true) @map("applicable_on_sales")
+  applicableOnPurchase Boolean           @default(true) @map("applicable_on_purchase")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  purchaseOrderItems PurchaseOrderItem[]
+  salesOrderItems    SalesOrderItem[]
+  vendorBillItems    VendorBillItem[]
+  customerInvoiceItems CustomerInvoiceItem[]
+
+  @@map("taxes")
+}
+
+// Chart of Accounts
+enum AccountType {
+  ASSET
+  LIABILITY
+  EXPENSE
+  INCOME
+  EQUITY
+}
+
+model ChartOfAccount {
+  id        String      @id @default(cuid())
+  name      String
+  type      AccountType
+  code      String?     @unique
+  parentId  String?     @map("parent_id")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  parent           ChartOfAccount? @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children         ChartOfAccount[] @relation("AccountHierarchy")
+  ledgerEntries    LedgerEntry[]
+
+  @@map("chart_of_accounts")
+}
+
+// Purchase Orders
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  poNumber    String    @unique @map("po_number")
+  poDate      DateTime  @map("po_date")
+  vendorId    String    @map("vendor_id")
+  vendorRef   String?   @map("vendor_ref")
+  status      String    @default("DRAFT")
+  subtotal    Decimal   @db.Decimal(10, 2)
+  taxAmount   Decimal   @map("tax_amount") @db.Decimal(10, 2)
+  total       Decimal   @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  vendor      Contact              @relation(fields: [vendorId], references: [id])
+  items       PurchaseOrderItem[]
+  vendorBills VendorBill[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String  @id @default(cuid())
+  purchaseOrderId String  @map("purchase_order_id")
+  productId       String  @map("product_id")
+  taxId           String? @map("tax_id")
+  quantity        Decimal @db.Decimal(10, 2)
+  unitPrice       Decimal @map("unit_price") @db.Decimal(10, 2)
+  taxAmount       Decimal @map("tax_amount") @db.Decimal(10, 2)
+  total           Decimal @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id])
+  tax           Tax?          @relation(fields: [taxId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+// Sales Orders
+model SalesOrder {
+  id          String    @id @default(cuid())
+  soNumber    String    @unique @map("so_number")
+  soDate      DateTime  @map("so_date")
+  customerId  String    @map("customer_id")
+  soRef       String?   @map("so_ref")
+  status      String    @default("DRAFT")
+  subtotal    Decimal   @db.Decimal(10, 2)
+  taxAmount   Decimal   @map("tax_amount") @db.Decimal(10, 2)
+  total       Decimal   @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  customer        Contact             @relation(fields: [customerId], references: [id])
+  items           SalesOrderItem[]
+  customerInvoices CustomerInvoice[]
+
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id           String  @id @default(cuid())
+  salesOrderId String  @map("sales_order_id")
+  productId    String  @map("product_id")
+  taxId        String? @map("tax_id")
+  quantity     Decimal @db.Decimal(10, 2)
+  unitPrice    Decimal @map("unit_price") @db.Decimal(10, 2)
+  taxAmount    Decimal @map("tax_amount") @db.Decimal(10, 2)
+  total        Decimal @db.Decimal(10, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product     @relation(fields: [productId], references: [id])
+  tax        Tax?        @relation(fields: [taxId], references: [id])
+
+  @@map("sales_order_items")
+}
+
+// Vendor Bills
+enum PaymentStatus {
+  PAID
+  UNPAID
+  PARTIAL
+}
+
+model VendorBill {
+  id            String        @id @default(cuid())
+  billNumber    String        @unique @map("bill_number")
+  billDate      DateTime      @map("bill_date")
+  dueDate       DateTime      @map("due_date")
+  vendorId      String        @map("vendor_id")
+  purchaseOrderId String?     @map("purchase_order_id")
+  billReference String?       @map("bill_reference")
+  paymentStatus PaymentStatus @default(UNPAID) @map("payment_status")
+  subtotal      Decimal       @db.Decimal(10, 2)
+  taxAmount     Decimal       @map("tax_amount") @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  paidAmount    Decimal       @default(0) @map("paid_amount") @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  vendor        Contact              @relation(fields: [vendorId], references: [id])
+  purchaseOrder PurchaseOrder?       @relation(fields: [purchaseOrderId], references: [id])
+  items         VendorBillItem[]
+  billPayments  BillPayment[]
+
+  @@map("vendor_bills")
+}
+
+model VendorBillItem {
+  id           String  @id @default(cuid())
+  vendorBillId String  @map("vendor_bill_id")
+  productId    String  @map("product_id")
+  taxId        String? @map("tax_id")
+  quantity     Decimal @db.Decimal(10, 2)
+  unitPrice    Decimal @map("unit_price") @db.Decimal(10, 2)
+  taxAmount    Decimal @map("tax_amount") @db.Decimal(10, 2)
+  total        Decimal @db.Decimal(10, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  vendorBill VendorBill @relation(fields: [vendorBillId], references: [id], onDelete: Cascade)
+  product    Product     @relation(fields: [productId], references: [id])
+  tax        Tax?        @relation(fields: [taxId], references: [id])
+
+  @@map("vendor_bill_items")
+}
+
+// Customer Invoices
+model CustomerInvoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique @map("invoice_number")
+  invoiceDate   DateTime      @map("invoice_date")
+  dueDate       DateTime      @map("due_date")
+  customerId    String        @map("customer_id")
+  salesOrderId  String?       @map("sales_order_id")
+  paymentStatus PaymentStatus @default(UNPAID) @map("payment_status")
+  subtotal      Decimal       @db.Decimal(10, 2)
+  taxAmount     Decimal       @map("tax_amount") @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  paidAmount    Decimal       @default(0) @map("paid_amount") @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  customer        Contact               @relation(fields: [customerId], references: [id])
+  salesOrder      SalesOrder?           @relation(fields: [salesOrderId], references: [id])
+  items           CustomerInvoiceItem[]
+  invoicePayments InvoicePayment[]
+
+  @@map("customer_invoices")
+}
+
+model CustomerInvoiceItem {
+  id              String  @id @default(cuid())
+  customerInvoiceId String @map("customer_invoice_id")
+  productId       String  @map("product_id")
+  taxId           String? @map("tax_id")
+  quantity        Decimal @db.Decimal(10, 2)
+  unitPrice       Decimal @map("unit_price") @db.Decimal(10, 2)
+  taxAmount       Decimal @map("tax_amount") @db.Decimal(10, 2)
+  total           Decimal @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  customerInvoice CustomerInvoice @relation(fields: [customerInvoiceId], references: [id], onDelete: Cascade)
+  product         Product         @relation(fields: [productId], references: [id])
+  tax             Tax?            @relation(fields: [taxId], references: [id])
+
+  @@map("customer_invoice_items")
+}
+
+// Payment Methods
+enum PaymentMethod {
+  CASH
+  BANK
+  CHEQUE
+  ONLINE
+}
+
+// Bill Payments
+model BillPayment {
+  id            String        @id @default(cuid())
+  paymentDate   DateTime      @map("payment_date")
+  paymentMethod PaymentMethod @map("payment_method")
+  vendorId      String        @map("vendor_id")
+  vendorBillId  String        @map("vendor_bill_id")
+  amount        Decimal       @db.Decimal(10, 2)
+  reference     String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  vendor     Contact     @relation(fields: [vendorId], references: [id])
+  vendorBill VendorBill  @relation(fields: [vendorBillId], references: [id])
+
+  @@map("bill_payments")
+}
+
+// Invoice Payments
+model InvoicePayment {
+  id              String        @id @default(cuid())
+  paymentDate     DateTime      @map("payment_date")
+  paymentMethod   PaymentMethod @map("payment_method")
+  customerId      String        @map("customer_id")
+  customerInvoiceId String      @map("customer_invoice_id")
+  amount          Decimal       @db.Decimal(10, 2)
+  reference       String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  customer        Contact         @relation(fields: [customerId], references: [id])
+  customerInvoice CustomerInvoice @relation(fields: [customerInvoiceId], references: [id])
+
+  @@map("invoice_payments")
+}
+
+// Ledger System
+enum LedgerEntryType {
+  DEBIT
+  CREDIT
+}
+
+model LedgerEntry {
+  id              String          @id @default(cuid())
+  accountId       String          @map("account_id")
+  contactId       String?         @map("contact_id")
+  entryType       LedgerEntryType @map("entry_type")
+  amount          Decimal         @db.Decimal(10, 2)
+  description     String?
+  referenceType   String?         @map("reference_type") // PO, SO, VB, CI, BP, IP
+  referenceId     String?         @map("reference_id")
+  transactionDate DateTime        @map("transaction_date")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  account ChartOfAccount @relation(fields: [accountId], references: [id])
+  contact Contact?       @relation(fields: [contactId], references: [id])
+
+  @@map("ledger_entries")
+}
+
+// Stock Management
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  productId   String            @map("product_id")
+  movementType StockMovementType @map("movement_type")
+  quantity    Decimal           @db.Decimal(10, 2)
+  referenceType String?         @map("reference_type") // PO, SO, VB, CI
+  referenceId String?           @map("reference_id")
+  description String?
+  movementDate DateTime         @map("movement_date")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("stock_movements")
+}
+
+// HSN Code Cache
+model HsnCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  description String
+  category    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("hsn_codes")
+}
