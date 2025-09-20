@@ -11,15 +11,13 @@ const router = Router();
 // @desc    Get all chart of accounts
 // @route   GET /api/chart-of-accounts
 // @access  Private
-router.get('/', [
-  authenticate,
+router.get('/', authenticate, validate([
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('type').optional().isIn(['ASSET', 'LIABILITY', 'EXPENSE', 'INCOME', 'EQUITY']).withMessage('Invalid account type'),
   query('parentId').optional().isString().withMessage('Parent ID must be a string'),
   query('search').optional().isString().withMessage('Search must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -132,14 +130,12 @@ router.get('/:id', async (req, res) => {
 // @desc    Create new account
 // @route   POST /api/chart-of-accounts
 // @access  Private
-router.post('/', [
-
+router.post('/', authenticate, validate([
   body('name').trim().notEmpty().withMessage('Account name is required'),
   body('type').isIn(['ASSET', 'LIABILITY', 'EXPENSE', 'INCOME', 'EQUITY']).withMessage('Invalid account type'),
   body('code').optional().isString().withMessage('Code must be a string'),
   body('parentId').optional().isString().withMessage('Parent ID must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const { name, type, code, parentId } = req.body;
 
@@ -207,14 +203,12 @@ router.post('/', [
 // @desc    Update account
 // @route   PUT /api/chart-of-accounts/:id
 // @access  Private
-router.put('/:id', [
-
+router.put('/:id', authenticate, validate([
   body('name').optional().trim().notEmpty().withMessage('Account name cannot be empty'),
   body('type').optional().isIn(['ASSET', 'LIABILITY', 'EXPENSE', 'INCOME', 'EQUITY']).withMessage('Invalid account type'),
   body('code').optional().isString().withMessage('Code must be a string'),
   body('parentId').optional().isString().withMessage('Parent ID must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -354,10 +348,7 @@ router.delete('/:id', async (req, res) => {
 // @desc    Get accounts by type
 // @route   GET /api/chart-of-accounts/by-type/:type
 // @access  Private
-router.get('/by-type/:type', [
-
-  validate
-], async (req: Request, res: Response) => {
+router.get('/by-type/:type', authenticate, async (req: Request, res: Response) => {
   try {
     const { type } = req.params;
 

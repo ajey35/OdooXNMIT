@@ -11,15 +11,13 @@ const router = Router();
 // @desc    Get all purchase orders
 // @route   GET /api/purchase-orders
 // @access  Private
-router.get('/', [
-  authenticate,
+router.get('/', authenticate, validate([
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('status').optional().isString().withMessage('Status must be a string'),
   query('vendorId').optional().isString().withMessage('Vendor ID must be a string'),
   query('search').optional().isString().withMessage('Search must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -159,18 +157,16 @@ router.get('/:id', authenticate, async (req, res) => {
 // @desc    Create new purchase order
 // @route   POST /api/purchase-orders
 // @access  Private
-router.post('/', [
-  authenticate,
-  body('vendorId').isString().withMessage('Vendor ID is required'),
-  body('poDate').isISO8601().withMessage('PO date must be a valid date'),
-  body('vendorRef').optional().isString().withMessage('Vendor reference must be a string'),
-  body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
-  body('items.*.productId').isString().withMessage('Product ID is required'),
-  body('items.*.quantity').isDecimal({ decimal_digits: '0,2' }).withMessage('Quantity must be a valid decimal'),
-  body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
-  body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.post('/', 
+  authenticate,validate([ body('vendorId').isString().withMessage('Vendor ID is required'),
+    body('poDate').isISO8601().withMessage('PO date must be a valid date'),
+    body('vendorRef').optional().isString().withMessage('Vendor reference must be a string'),
+    body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
+    body('items.*.productId').isString().withMessage('Product ID is required'),
+    body('items.*.quantity').isDecimal({ decimal_digits: '0,2' }).withMessage('Quantity must be a valid decimal'),
+    body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
+    body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),])
+, async (req: Request, res: Response) => {
   try {
     const { vendorId, poDate, vendorRef, items } = req.body;
 
@@ -195,8 +191,9 @@ router.post('/', [
 
     // Verify taxes exist if provided
     const taxIds = items.filter((item: any) => item.taxId).map((item: any) => item.taxId);
+    let taxes: any[] = [];
     if (taxIds.length > 0) {
-      const taxes = await prisma.tax.findMany({
+      taxes = await prisma.tax.findMany({
         where: { id: { in: taxIds } }
       });
 
@@ -297,13 +294,11 @@ router.post('/', [
 // @desc    Update purchase order
 // @route   PUT /api/purchase-orders/:id
 // @access  Private
-router.put('/:id', [
-  authenticate,
-  body('poDate').optional().isISO8601().withMessage('PO date must be a valid date'),
-  body('vendorRef').optional().isString().withMessage('Vendor reference must be a string'),
-  body('status').optional().isString().withMessage('Status must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.put('/:id', 
+  authenticate,validate([ body('poDate').optional().isISO8601().withMessage('PO date must be a valid date'),
+    body('vendorRef').optional().isString().withMessage('Vendor reference must be a string'),
+    body('status').optional().isString().withMessage('Status must be a string'),])
+, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -398,13 +393,11 @@ router.delete('/:id', authenticate, async (req, res) => {
 // @desc    Convert purchase order to vendor bill
 // @route   POST /api/purchase-orders/:id/convert-to-bill
 // @access  Private
-router.post('/:id/convert-to-bill', [
-  authenticate,
-  body('billDate').isISO8601().withMessage('Bill date must be a valid date'),
-  body('dueDate').isISO8601().withMessage('Due date must be a valid date'),
-  body('billReference').optional().isString().withMessage('Bill reference must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.post('/:id/convert-to-bill', 
+  authenticate,validate([ body('billDate').isISO8601().withMessage('Bill date must be a valid date'),
+    body('dueDate').isISO8601().withMessage('Due date must be a valid date'),
+    body('billReference').optional().isString().withMessage('Bill reference must be a string'),]) 
+, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { billDate, dueDate, billReference } = req.body;

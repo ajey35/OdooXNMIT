@@ -1,6 +1,7 @@
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
+      HSN_API_BASE_URL: string;
       JWT_SECRET: any;
       PORT?: string;
       CORS_ORIGIN?: string;
