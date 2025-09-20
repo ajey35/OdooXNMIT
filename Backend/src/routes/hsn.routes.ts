@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { query } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -17,7 +17,7 @@ router.get('/search', [
   query('selectedType').isIn(['byCode', 'byDesc']).withMessage('Selected type must be "byCode" or "byDesc"'),
   query('category').isIn(['null', 'P', 'S']).withMessage('Category must be "null", "P", or "S"'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { inputText, selectedType, category } = req.query;
 
@@ -121,7 +121,7 @@ router.get('/cached', [
   query('search').optional().isString().withMessage('Search must be a string'),
   query('category').optional().isIn(['PRODUCT', 'SERVICE']).withMessage('Invalid category'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -209,7 +209,7 @@ router.get('/stats', authenticate, async (req, res) => {
 router.post('/validate', [
   authenticate,
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { code } = req.body;
 

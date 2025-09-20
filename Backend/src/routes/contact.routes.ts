@@ -1,6 +1,6 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { body, query } from 'express-validator';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, authorize, type AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { generatePagination } from '../utils/helpers.js';
@@ -11,15 +11,14 @@ const router = Router();
 // @desc    Get all contacts
 // @route   GET /api/contacts
 // @access  Private
-router.get('/', [
-  authenticate,
+router.get('/', authenticate,validate([
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('type').optional().isIn(['CUSTOMER', 'VENDOR', 'BOTH']).withMessage('Invalid contact type'),
   query('search').optional().isString().withMessage('Search must be a string'),
-  validate
-], async (req, res) => {
-  try {
+  
+]), async (req: Request, res: Response) => {
+    try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const type = req.query.type as string;
@@ -77,7 +76,7 @@ router.get('/', [
 // @desc    Get contact by ID
 // @route   GET /api/contacts/:id
 // @access  Private
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -108,8 +107,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // @desc    Create new contact
 // @route   POST /api/contacts
 // @access  Private
-router.post('/', [
-  authenticate,
+router.post('/', authenticate,validate([
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('type').isIn(['CUSTOMER', 'VENDOR', 'BOTH']).withMessage('Invalid contact type'),
   body('email').optional().isEmail().withMessage('Please provide a valid email'),
@@ -118,8 +116,8 @@ router.post('/', [
   body('state').optional().isString().withMessage('State must be a string'),
   body('pincode').optional().isPostalCode('IN').withMessage('Please provide a valid pincode'),
   body('address').optional().isString().withMessage('Address must be a string'),
-  validate
-], async (req, res) => {
+  
+  ]), async (req: AuthRequest, res: Response) => {
   try {
     const {
       name,
@@ -176,8 +174,8 @@ router.post('/', [
 // @desc    Update contact
 // @route   PUT /api/contacts/:id
 // @access  Private
-router.put('/:id', [
-  authenticate,
+router.put('/:id', authenticate,validate([
+  
   body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
   body('type').optional().isIn(['CUSTOMER', 'VENDOR', 'BOTH']).withMessage('Invalid contact type'),
   body('email').optional().isEmail().withMessage('Please provide a valid email'),
@@ -186,8 +184,8 @@ router.put('/:id', [
   body('state').optional().isString().withMessage('State must be a string'),
   body('pincode').optional().isPostalCode('IN').withMessage('Please provide a valid pincode'),
   body('address').optional().isString().withMessage('Address must be a string'),
-  validate
-], async (req, res) => {
+  
+]), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -239,7 +237,7 @@ router.put('/:id', [
 // @desc    Delete contact
 // @route   DELETE /api/contacts/:id
 // @access  Private
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -277,7 +275,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 // @desc    Upload contact profile image
 // @route   POST /api/contacts/:id/upload-image
 // @access  Private
-router.post('/:id/upload-image', authenticate, async (req, res) => {
+router.post('/:id/upload-image', authenticate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -302,7 +300,7 @@ router.post('/:id/upload-image', authenticate, async (req, res) => {
 // @desc    Get contact statistics
 // @route   GET /api/contacts/stats
 // @access  Private
-router.get('/stats', authenticate, async (req, res) => {
+router.get('/stats', authenticate, async (req: Request, res: Response) => {
   try {
     const [totalContacts, customers, vendors, both] = await Promise.all([
       prisma.contact.count(),

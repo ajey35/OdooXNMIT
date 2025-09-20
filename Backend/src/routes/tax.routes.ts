@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { body, query } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -20,7 +20,7 @@ router.get('/', [
   query('applicableOnPurchase').optional().isBoolean().withMessage('Applicable on purchase must be a boolean'),
   query('search').optional().isString().withMessage('Search must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -106,7 +106,7 @@ router.post('/', [
   body('applicableOnSales').optional().isBoolean().withMessage('Applicable on sales must be a boolean'),
   body('applicableOnPurchase').optional().isBoolean().withMessage('Applicable on purchase must be a boolean'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const {
       name,
@@ -153,7 +153,7 @@ router.put('/:id', [
   body('applicableOnSales').optional().isBoolean().withMessage('Applicable on sales must be a boolean'),
   body('applicableOnPurchase').optional().isBoolean().withMessage('Applicable on purchase must be a boolean'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -244,7 +244,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 router.get('/by-type/:type', [
   authenticate,
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { type } = req.params;
 
@@ -302,7 +302,7 @@ router.post('/calculate', [
   body('amount').isDecimal({ decimal_digits: '0,2' }).withMessage('Amount must be a valid decimal'),
   body('taxId').isString().withMessage('Tax ID is required'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { amount, taxId } = req.body;
 

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { body, query } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -19,7 +19,7 @@ router.get('/', [
   query('category').optional().isString().withMessage('Category must be a string'),
   query('search').optional().isString().withMessage('Search must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -107,7 +107,7 @@ router.post('/', [
   body('hsnCode').optional().isString().withMessage('HSN code must be a string'),
   body('category').optional().isString().withMessage('Category must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const {
       name,
@@ -163,7 +163,7 @@ router.put('/:id', [
   body('hsnCode').optional().isString().withMessage('HSN code must be a string'),
   body('category').optional().isString().withMessage('Category must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -306,7 +306,7 @@ router.put('/bulk-update', [
   body('products').isArray().withMessage('Products must be an array'),
   body('products.*.id').isString().withMessage('Product ID is required'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { products } = req.body;
 

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { body, query } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -19,7 +19,7 @@ router.get('/', [
   query('vendorId').optional().isString().withMessage('Vendor ID must be a string'),
   query('search').optional().isString().withMessage('Search must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -204,7 +204,7 @@ router.post('/', [
   body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
   body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { vendorId, billDate, dueDate, purchaseOrderId, billReference, items } = req.body;
 
@@ -357,7 +357,7 @@ router.put('/:id', [
   body('billReference').optional().isString().withMessage('Bill reference must be a string'),
   body('paymentStatus').optional().isIn(['PAID', 'UNPAID', 'PARTIAL']).withMessage('Invalid payment status'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;

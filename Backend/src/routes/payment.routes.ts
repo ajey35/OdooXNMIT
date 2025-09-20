@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { body, query } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -19,7 +19,7 @@ router.get('/bill-payments', [
   query('paymentMethod').optional().isIn(['CASH', 'BANK', 'CHEQUE', 'ONLINE']).withMessage('Invalid payment method'),
   query('search').optional().isString().withMessage('Search must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -100,7 +100,7 @@ router.get('/invoice-payments', [
   query('paymentMethod').optional().isIn(['CASH', 'BANK', 'CHEQUE', 'ONLINE']).withMessage('Invalid payment method'),
   query('search').optional().isString().withMessage('Search must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -182,7 +182,7 @@ router.post('/bill-payments', [
   body('amount').isDecimal({ decimal_digits: '0,2' }).withMessage('Amount must be a valid decimal'),
   body('reference').optional().isString().withMessage('Reference must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { paymentDate, paymentMethod, vendorId, vendorBillId, amount, reference } = req.body;
 
@@ -282,7 +282,7 @@ router.post('/invoice-payments', [
   body('amount').isDecimal({ decimal_digits: '0,2' }).withMessage('Amount must be a valid decimal'),
   body('reference').optional().isString().withMessage('Reference must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { paymentDate, paymentMethod, customerId, customerInvoiceId, amount, reference } = req.body;
 
@@ -426,7 +426,7 @@ router.get('/by-date-range', [
   query('endDate').isISO8601().withMessage('End date must be a valid date'),
   query('type').optional().isIn(['bill', 'invoice', 'all']).withMessage('Type must be bill, invoice, or all'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, type = 'all' } = req.query;
 

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { body, query } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -19,7 +19,7 @@ router.get('/', [
   query('vendorId').optional().isString().withMessage('Vendor ID must be a string'),
   query('search').optional().isString().withMessage('Search must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -170,7 +170,7 @@ router.post('/', [
   body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
   body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { vendorId, poDate, vendorRef, items } = req.body;
 
@@ -303,7 +303,7 @@ router.put('/:id', [
   body('vendorRef').optional().isString().withMessage('Vendor reference must be a string'),
   body('status').optional().isString().withMessage('Status must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -404,7 +404,7 @@ router.post('/:id/convert-to-bill', [
   body('dueDate').isISO8601().withMessage('Due date must be a valid date'),
   body('billReference').optional().isString().withMessage('Bill reference must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { billDate, dueDate, billReference } = req.body;
