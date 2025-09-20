@@ -12,15 +12,15 @@ export const comparePassword = async (password: string, hashedPassword: string):
 };
 
 export const generateToken = (payload: { id: string; email: string; role: string }): string => {
-  return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d'
-  });
+  const secret = process.env.JWT_SECRET!;
+  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+  return jwt.sign(payload, secret, { expiresIn } as SignOptions);
 };
 
 export const generateRefreshToken = (payload: { id: string; email: string; role: string }): string => {
-  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, {
-    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d'
-  });
+  const secret = process.env.JWT_REFRESH_SECRET!;
+  const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
+  return jwt.sign(payload, secret, { expiresIn } as SignOptions);
 };
 
 export const verifyToken = (token: string): any => {
