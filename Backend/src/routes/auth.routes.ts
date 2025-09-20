@@ -7,7 +7,7 @@ import { validate } from '../middleware/validation.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { hashPassword, comparePassword, generateToken, generateRefreshToken } from '../utils/helpers.js';
 import prisma from '../lib/prisma.js';
-import { log } from 'console';
+import { sendOTPEmail } from '../utils/email.js';
 
 const router = Router();
 
@@ -366,5 +366,104 @@ router.put('/users/:id/status', authenticate, authorize('ADMIN'), validate([
     sendError(res, 'Failed to update user status', 500);
   }
 });
+// @desc    Request forgot password
+// @route   POST /api/auth/forgot-password
+// @access  Public
+router.post('/forgot-password', validate([
+  body('email').isEmail().withMessage('Valid email is required')
+]), async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return sendError(res, 'Email not registered', 404);
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Set expiry (10 min)
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 10);
+
+    // Save OTP & expiry
+    await prisma.user.update({
+      where: { email },
+      data: { otp, otpExpiry: expiry }
+    });
+
+    // Send OTP email
+    await sendOTPEmail(email, otp);
+
+    sendSuccess(res, 'OTP sent to email', null);
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    sendError(res, 'Failed to send OTP', 500);
+  }
+});
+
+// @desc    Verify OTP
+// @route   POST /api/auth/verify-otp
+// @access  Public
+router.post('/verify-otp', validate([
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits')
+]), async (req: Request, res: Response) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return sendError(res, 'Email not registered', 404);
+
+    if (!user?.otp || !user?.otpExpiry) return sendError(res, 'No OTP requested', 400);
+
+    const now = new Date();
+    if (user.otp !== otp || user.otpExpiry < now) {
+      return sendError(res, 'Invalid or expired OTP', 400);
+    }
+
+    sendSuccess(res, 'OTP verified successfully', null);
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    sendError(res, 'Failed to verify OTP', 500);
+  }
+});
+
+// @desc    Reset password after OTP
+// @route   POST /api/auth/reset-password
+// @access  Public
+router.post('/reset-password', validate([
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+]), async (req: Request, res: Response) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return sendError(res, 'Email not registered', 404);
+
+    if (!user.otp || !user.otpExpiry) return sendError(res, 'No OTP requested', 400);
+
+    const now = new Date();
+    if (user.otp !== otp || user.otpExpiry < now) {
+      return sendError(res, 'Invalid or expired OTP', 400);
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password and remove OTP
+    await prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword, otp: null, otpExpiry: null }
+    });
+
+    sendSuccess(res, 'Password reset successfully');
+  } catch (error) {
+    console.error('Reset password error:', error);
+    sendError(res, 'Failed to reset password', 500);
+  }
+});
+
 
 export default router;

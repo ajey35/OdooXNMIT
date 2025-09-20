@@ -10,6 +10,7 @@ import { Badge } from "../../components/ui/badge"
 import { useAuth } from "../../lib/auth"
 import { useState } from "react"
 import { User, Mail, Award as IdCard, Shield, Calendar } from "lucide-react"
+import { ProtectedRoute } from "../../components/auth/protected-route"
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -36,7 +37,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <DashboardLayout title="Profile">
+    <ProtectedRoute>
+      <DashboardLayout title="Profile">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Profile</h1>
@@ -163,5 +165,6 @@ export default function ProfilePage() {
         </Card>
       </div>
     </DashboardLayout>
+    </ProtectedRoute>
   )
 }

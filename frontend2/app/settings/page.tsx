@@ -10,6 +10,7 @@ import { Separator } from "../../components/ui/separator"
 import { useAuth } from "../../lib/auth"
 import { useState } from "react"
 import { User, Bell, Shield } from "lucide-react"
+import { ProtectedRoute } from "../../components/auth/protected-route"
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -20,7 +21,8 @@ export default function SettingsPage() {
   })
 
   return (
-    <DashboardLayout title="Settings">
+    <ProtectedRoute>
+      <DashboardLayout title="Settings">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Settings</h1>
@@ -118,5 +120,6 @@ export default function SettingsPage() {
         </div>
       </div>
     </DashboardLayout>
+    </ProtectedRoute>
   )
 }

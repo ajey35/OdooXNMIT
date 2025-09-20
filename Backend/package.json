@@ -1,8 +1,8 @@
 {
-  "name": "shiv-accounts-backend",
+  "name": "backend",
   "version": "1.0.0",
   "description": "Backend API for Shiv Accounts Cloud - Accounting System",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@prisma/client": "6.16.1",
+    "@types/nodemailer": "^7.0.1",
     "axios": "^1.6.2",
     "bcryptjs": "3.0.1",
     "compression": "^1.7.4",
@@ -37,6 +38,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "latest",
     "multer": "2.0.1",
+    "nodemailer": "^7.0.6",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0"
   },

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { DashboardLayout } from "../../components/layout/dashboard-layout"
+import { ProtectedRoute } from "../../components/auth/protected-route"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
 import { apiClient } from "../../lib/api"
 import { BarChart3, ShoppingCart, Receipt, TrendingUp, ArrowUpRight } from "lucide-react"
@@ -90,22 +91,18 @@ export default function DashboardPage() {
     }).format(amount)
   }
 
-  if (loading) {
-    return (
-      <DashboardLayout title="Dashboard">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading dashboard...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
   return (
-    <DashboardLayout title="Dashboard">
-      <div className="space-y-4 md:space-y-6">
+    <ProtectedRoute>
+      <DashboardLayout title="Dashboard">
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-muted-foreground">Loading dashboard...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 md:space-y-6">
         {/* Overview Cards */}
         <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -310,6 +307,8 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
-    </DashboardLayout>
+        )}
+      </DashboardLayout>
+    </ProtectedRoute>
   )
 }

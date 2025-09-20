@@ -29,6 +29,8 @@ model User {
   loginId   String     @unique @map("login_id")
   password  String
   name      String
+  otp       String?
+  otpExpiry DateTime?
   role      UserRole   @default(INVOICING_USER)
   status    UserStatus @default(ACTIVE)
   createdAt DateTime   @default(now()) @map("created_at")

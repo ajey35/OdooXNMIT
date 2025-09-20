@@ -1,21 +1,15 @@
 "use client"
 
-import type React from "react"
-
-import { useAuth } from "@/lib/auth"
+import React, { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { Sidebar } from "./sidebar"
-import { Header } from "./header"
+import { useAuth } from "../../lib/auth"
 import { Loader2 } from "lucide-react"
 
-interface DashboardLayoutProps {
+interface ProtectedRouteProps {
   children: React.ReactNode
-  title?: string
-  headerActions?: React.ReactNode
 }
 
-export function DashboardLayout({ children, title, headerActions }: DashboardLayoutProps) {
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, loading } = useAuth()
   const router = useRouter()
 
@@ -40,13 +34,5 @@ export function DashboardLayout({ children, title, headerActions }: DashboardLay
     return null
   }
 
-  return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title={title}>{headerActions}</Header>
-        <main className="flex-1 overflow-auto p-6">{children}</main>
-      </div>
-    </div>
-  )
+  return <>{children}</>
 }

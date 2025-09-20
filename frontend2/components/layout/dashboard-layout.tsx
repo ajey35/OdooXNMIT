@@ -1,13 +1,11 @@
 "use client"
 
-import  React from "react"
-import { useAuth } from "../../lib/auth"
+import React from "react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Sidebar } from "./sidebar"
 import { Header } from "./header"
 import { TopMenu } from "./top-menu"
-import { Loader2 } from "lucide-react"
 import { Sheet, SheetContent } from "../ui/sheet"
 
 interface DashboardLayoutProps {
@@ -17,30 +15,9 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children, title, headerActions }: DashboardLayoutProps) {
-  const { isAuthenticated, loading } = useAuth()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/auth/login")
-    }
-  }, [isAuthenticated, loading, router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return null
-  }
 
   return (
     <div className="flex h-screen bg-background">
