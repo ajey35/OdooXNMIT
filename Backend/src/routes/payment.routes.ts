@@ -11,15 +11,13 @@ const router = Router();
 // @desc    Get all bill payments
 // @route   GET /api/payments/bill-payments
 // @access  Private
-router.get('/bill-payments', [
-  authenticate,
+router.get('/bill-payments', authenticate, validate([
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('vendorId').optional().isString().withMessage('Vendor ID must be a string'),
   query('paymentMethod').optional().isIn(['CASH', 'BANK', 'CHEQUE', 'ONLINE']).withMessage('Invalid payment method'),
   query('search').optional().isString().withMessage('Search must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -92,15 +90,13 @@ router.get('/bill-payments', [
 // @desc    Get all invoice payments
 // @route   GET /api/payments/invoice-payments
 // @access  Private
-router.get('/invoice-payments', [
-  authenticate,
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-  query('customerId').optional().isString().withMessage('Customer ID must be a string'),
-  query('paymentMethod').optional().isIn(['CASH', 'BANK', 'CHEQUE', 'ONLINE']).withMessage('Invalid payment method'),
-  query('search').optional().isString().withMessage('Search must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.get('/invoice-payments', 
+  authenticate,validate([ query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+    query('customerId').optional().isString().withMessage('Customer ID must be a string'),
+    query('paymentMethod').optional().isIn(['CASH', 'BANK', 'CHEQUE', 'ONLINE']).withMessage('Invalid payment method'),
+    query('search').optional().isString().withMessage('Search must be a string')])
+, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -173,16 +169,16 @@ router.get('/invoice-payments', [
 // @desc    Create bill payment
 // @route   POST /api/payments/bill-payments
 // @access  Private
-router.post('/bill-payments', [
-  authenticate,
-  body('paymentDate').isISO8601().withMessage('Payment date must be a valid date'),
-  body('paymentMethod').isIn(['CASH', 'BANK', 'CHEQUE', 'ONLINE']).withMessage('Invalid payment method'),
-  body('vendorId').isString().withMessage('Vendor ID is required'),
-  body('vendorBillId').isString().withMessage('Vendor bill ID is required'),
-  body('amount').isDecimal({ decimal_digits: '0,2' }).withMessage('Amount must be a valid decimal'),
-  body('reference').optional().isString().withMessage('Reference must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.post('/bill-payments', 
+  authenticate,validate([body('paymentDate').isISO8601().withMessage('Payment date must be a valid date'),
+    body('paymentMethod').isIn(['CASH', 'BANK', 'CHEQUE', 'ONLINE']).withMessage('Invalid payment method'),
+    body('vendorId').isString().withMessage('Vendor ID is required'),
+    body('vendorBillId').isString().withMessage('Vendor bill ID is required'),
+    body('amount').isDecimal({ decimal_digits: '0,2' }).withMessage('Amount must be a valid decimal'),
+    body('reference').optional().isString().withMessage('Reference must be a string'),
+    ])
+  
+, async (req: Request, res: Response) => {
   try {
     const { paymentDate, paymentMethod, vendorId, vendorBillId, amount, reference } = req.body;
 
@@ -273,16 +269,16 @@ router.post('/bill-payments', [
 // @desc    Create invoice payment
 // @route   POST /api/payments/invoice-payments
 // @access  Private
-router.post('/invoice-payments', [
-  authenticate,
-  body('paymentDate').isISO8601().withMessage('Payment date must be a valid date'),
-  body('paymentMethod').isIn(['CASH', 'BANK', 'CHEQUE', 'ONLINE']).withMessage('Invalid payment method'),
-  body('customerId').isString().withMessage('Customer ID is required'),
-  body('customerInvoiceId').isString().withMessage('Customer invoice ID is required'),
-  body('amount').isDecimal({ decimal_digits: '0,2' }).withMessage('Amount must be a valid decimal'),
-  body('reference').optional().isString().withMessage('Reference must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.post('/invoice-payments', 
+  authenticate,validate([body('paymentDate').isISO8601().withMessage('Payment date must be a valid date'),
+    body('paymentMethod').isIn(['CASH', 'BANK', 'CHEQUE', 'ONLINE']).withMessage('Invalid payment method'),
+    body('customerId').isString().withMessage('Customer ID is required'),
+    body('customerInvoiceId').isString().withMessage('Customer invoice ID is required'),
+    body('amount').isDecimal({ decimal_digits: '0,2' }).withMessage('Amount must be a valid decimal'),
+    body('reference').optional().isString().withMessage('Reference must be a string'),])
+  
+  
+, async (req: Request, res: Response) => {
   try {
     const { paymentDate, paymentMethod, customerId, customerInvoiceId, amount, reference } = req.body;
 
@@ -380,9 +376,12 @@ router.get('/stats', authenticate, async (req, res) => {
       totalInvoicePayments,
       billPaymentAmount,
       invoicePaymentAmount,
-      cashPayments,
-      bankPayments,
-      onlinePayments
+      billCashCount,
+      invoiceCashCount,
+      billBankCount,
+      invoiceBankCount,
+      billOnlineCount,
+      invoiceOnlineCount
     ] = await Promise.all([
       prisma.billPayment.count(),
       prisma.invoicePayment.count(),
@@ -392,21 +391,25 @@ router.get('/stats', authenticate, async (req, res) => {
       prisma.invoicePayment.aggregate({
         _sum: { amount: true }
       }),
-      prisma.billPayment.count({ where: { paymentMethod: 'CASH' } }) +
+      prisma.billPayment.count({ where: { paymentMethod: 'CASH' } }),
       prisma.invoicePayment.count({ where: { paymentMethod: 'CASH' } }),
-      prisma.billPayment.count({ where: { paymentMethod: 'BANK' } }) +
+      prisma.billPayment.count({ where: { paymentMethod: 'BANK' } }),
       prisma.invoicePayment.count({ where: { paymentMethod: 'BANK' } }),
-      prisma.billPayment.count({ where: { paymentMethod: 'ONLINE' } }) +
+      prisma.billPayment.count({ where: { paymentMethod: 'ONLINE' } }),
       prisma.invoicePayment.count({ where: { paymentMethod: 'ONLINE' } })
     ]);
+
+    const cashPayments = billCashCount + invoiceCashCount;
+    const bankPayments = billBankCount + invoiceBankCount;
+    const onlinePayments = billOnlineCount + invoiceOnlineCount;
 
     sendSuccess(res, 'Payment statistics retrieved successfully', {
       totalBillPayments,
       totalInvoicePayments,
       totalPayments: totalBillPayments + totalInvoicePayments,
-      billPaymentAmount: billPaymentAmount._sum.amount || 0,
-      invoicePaymentAmount: invoicePaymentAmount._sum.amount || 0,
-      totalPaymentAmount: (billPaymentAmount._sum.amount || 0) + (invoicePaymentAmount._sum.amount || 0),
+      billPaymentAmount: billPaymentAmount._sum.amount ? billPaymentAmount._sum.amount.toNumber() : 0,
+      invoicePaymentAmount: invoicePaymentAmount._sum.amount ? invoicePaymentAmount._sum.amount.toNumber() : 0,
+      totalPaymentAmount: (billPaymentAmount._sum.amount ? billPaymentAmount._sum.amount.toNumber() : 0) + (invoicePaymentAmount._sum.amount ? invoicePaymentAmount._sum.amount.toNumber() : 0),
       cashPayments,
       bankPayments,
       onlinePayments
@@ -420,13 +423,13 @@ router.get('/stats', authenticate, async (req, res) => {
 // @desc    Get payments by date range
 // @route   GET /api/payments/by-date-range
 // @access  Private
-router.get('/by-date-range', [
-  authenticate,
-  query('startDate').isISO8601().withMessage('Start date must be a valid date'),
-  query('endDate').isISO8601().withMessage('End date must be a valid date'),
-  query('type').optional().isIn(['bill', 'invoice', 'all']).withMessage('Type must be bill, invoice, or all'),
-  validate
-], async (req: Request, res: Response) => {
+router.get('/by-date-range', 
+  authenticate,validate([ query('startDate').isISO8601().withMessage('Start date must be a valid date'),
+    query('endDate').isISO8601().withMessage('End date must be a valid date'),
+    query('type').optional().isIn(['bill', 'invoice', 'all']).withMessage('Type must be bill, invoice, or all'),])
+ 
+  
+, async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, type = 'all' } = req.query;
 
@@ -437,8 +440,8 @@ router.get('/by-date-range', [
       }
     };
 
-    let billPayments = [];
-    let invoicePayments = [];
+    let billPayments: any[] = [];
+    let invoicePayments: any[] = [];
 
     if (type === 'all' || type === 'bill') {
       billPayments = await prisma.billPayment.findMany({

@@ -11,15 +11,13 @@ const router = Router();
 // @desc    Get all vendor bills
 // @route   GET /api/vendor-bills
 // @access  Private
-router.get('/', [
-  authenticate,
+router.get('/', authenticate, validate([
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('paymentStatus').optional().isIn(['PAID', 'UNPAID', 'PARTIAL']).withMessage('Invalid payment status'),
   query('vendorId').optional().isString().withMessage('Vendor ID must be a string'),
   query('search').optional().isString().withMessage('Search must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -191,20 +189,20 @@ router.get('/:id', authenticate, async (req, res) => {
 // @desc    Create new vendor bill
 // @route   POST /api/vendor-bills
 // @access  Private
-router.post('/', [
-  authenticate,
-  body('vendorId').isString().withMessage('Vendor ID is required'),
-  body('billDate').isISO8601().withMessage('Bill date must be a valid date'),
-  body('dueDate').isISO8601().withMessage('Due date must be a valid date'),
-  body('purchaseOrderId').optional().isString().withMessage('Purchase order ID must be a string'),
-  body('billReference').optional().isString().withMessage('Bill reference must be a string'),
-  body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
-  body('items.*.productId').isString().withMessage('Product ID is required'),
-  body('items.*.quantity').isDecimal({ decimal_digits: '0,2' }).withMessage('Quantity must be a valid decimal'),
-  body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
-  body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.post('/', 
+  authenticate,validate([body('vendorId').isString().withMessage('Vendor ID is required'),
+    body('billDate').isISO8601().withMessage('Bill date must be a valid date'),
+    body('dueDate').isISO8601().withMessage('Due date must be a valid date'),
+    body('purchaseOrderId').optional().isString().withMessage('Purchase order ID must be a string'),
+    body('billReference').optional().isString().withMessage('Bill reference must be a string'),
+    body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
+    body('items.*.productId').isString().withMessage('Product ID is required'),
+    body('items.*.quantity').isDecimal({ decimal_digits: '0,2' }).withMessage('Quantity must be a valid decimal'),
+    body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
+    body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),])
+  
+  
+, async (req: Request, res: Response) => {
   try {
     const { vendorId, billDate, dueDate, purchaseOrderId, billReference, items } = req.body;
 
@@ -240,8 +238,9 @@ router.post('/', [
 
     // Verify taxes exist if provided
     const taxIds = items.filter((item: any) => item.taxId).map((item: any) => item.taxId);
+    let taxes: any[] = [];
     if (taxIds.length > 0) {
-      const taxes = await prisma.tax.findMany({
+      taxes = await prisma.tax.findMany({
         where: { id: { in: taxIds } }
       });
 
@@ -350,14 +349,14 @@ router.post('/', [
 // @desc    Update vendor bill
 // @route   PUT /api/vendor-bills/:id
 // @access  Private
-router.put('/:id', [
-  authenticate,
-  body('billDate').optional().isISO8601().withMessage('Bill date must be a valid date'),
-  body('dueDate').optional().isISO8601().withMessage('Due date must be a valid date'),
-  body('billReference').optional().isString().withMessage('Bill reference must be a string'),
-  body('paymentStatus').optional().isIn(['PAID', 'UNPAID', 'PARTIAL']).withMessage('Invalid payment status'),
-  validate
-], async (req: Request, res: Response) => {
+router.put('/:id', 
+  authenticate,validate([body('billDate').optional().isISO8601().withMessage('Bill date must be a valid date'),
+    body('dueDate').optional().isISO8601().withMessage('Due date must be a valid date'),
+    body('billReference').optional().isString().withMessage('Bill reference must be a string'),
+    body('paymentStatus').optional().isIn(['PAID', 'UNPAID', 'PARTIAL']).withMessage('Invalid payment status'),])
+  
+  
+, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -435,7 +434,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     }
 
     // Don't allow deleting if there are payments
-    if (vendorBill.paidAmount > 0) {
+    if (vendorBill.paidAmount && vendorBill.paidAmount.toNumber() > 0) {
       return sendError(res, 'Cannot delete vendor bill with payments', 400);
     }
 
@@ -468,15 +467,15 @@ router.get('/stats', authenticate, async (req, res) => {
       })
     ]);
 
-    const pendingValue = (totalValue._sum.total || 0) - (paidValue._sum.paidAmount || 0);
+    const pendingValue = (totalValue._sum.total ? totalValue._sum.total.toNumber() : 0) - (paidValue._sum.paidAmount ? paidValue._sum.paidAmount.toNumber() : 0);
 
     sendSuccess(res, 'Vendor bill statistics retrieved successfully', {
       totalBills,
       paidBills,
       unpaidBills,
       partialBills,
-      totalValue: totalValue._sum.total || 0,
-      paidValue: paidValue._sum.paidAmount || 0,
+      totalValue: totalValue._sum.total ? totalValue._sum.total.toNumber() : 0,
+      paidValue: paidValue._sum.paidAmount ? paidValue._sum.paidAmount.toNumber() : 0,
       pendingValue
     });
   } catch (error) {

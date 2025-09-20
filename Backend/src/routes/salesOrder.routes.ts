@@ -11,15 +11,15 @@ const router = Router();
 // @desc    Get all sales orders
 // @route   GET /api/sales-orders
 // @access  Private
-router.get('/', [
-  authenticate,
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-  query('status').optional().isString().withMessage('Status must be a string'),
-  query('customerId').optional().isString().withMessage('Customer ID must be a string'),
-  query('search').optional().isString().withMessage('Search must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.get('/', 
+  authenticate,validate([query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+    query('status').optional().isString().withMessage('Status must be a string'),
+    query('customerId').optional().isString().withMessage('Customer ID must be a string'),
+    query('search').optional().isString().withMessage('Search must be a string'),])
+  
+  
+, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -159,8 +159,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // @desc    Create new sales order
 // @route   POST /api/sales-orders
 // @access  Private
-router.post('/', [
-  authenticate,
+router.post('/', authenticate, validate([
   body('customerId').isString().withMessage('Customer ID is required'),
   body('soDate').isISO8601().withMessage('SO date must be a valid date'),
   body('soRef').optional().isString().withMessage('SO reference must be a string'),
@@ -169,8 +168,7 @@ router.post('/', [
   body('items.*.quantity').isDecimal({ decimal_digits: '0,2' }).withMessage('Quantity must be a valid decimal'),
   body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
   body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const { customerId, soDate, soRef, items } = req.body;
 
@@ -195,8 +193,9 @@ router.post('/', [
 
     // Verify taxes exist if provided
     const taxIds = items.filter((item: any) => item.taxId).map((item: any) => item.taxId);
+    let taxes: any[] = [];
     if (taxIds.length > 0) {
-      const taxes = await prisma.tax.findMany({
+      taxes = await prisma.tax.findMany({
         where: { id: { in: taxIds } }
       });
 
@@ -297,13 +296,11 @@ router.post('/', [
 // @desc    Update sales order
 // @route   PUT /api/sales-orders/:id
 // @access  Private
-router.put('/:id', [
-  authenticate,
-  body('soDate').optional().isISO8601().withMessage('SO date must be a valid date'),
-  body('soRef').optional().isString().withMessage('SO reference must be a string'),
-  body('status').optional().isString().withMessage('Status must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.put('/:id', 
+  authenticate,validate([body('soDate').optional().isISO8601().withMessage('SO date must be a valid date'),
+    body('soRef').optional().isString().withMessage('SO reference must be a string'),
+    body('status').optional().isString().withMessage('Status must be a string'),])
+, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -398,12 +395,12 @@ router.delete('/:id', authenticate, async (req, res) => {
 // @desc    Convert sales order to customer invoice
 // @route   POST /api/sales-orders/:id/convert-to-invoice
 // @access  Private
-router.post('/:id/convert-to-invoice', [
-  authenticate,
-  body('invoiceDate').isISO8601().withMessage('Invoice date must be a valid date'),
-  body('dueDate').isISO8601().withMessage('Due date must be a valid date'),
-  validate
-], async (req: Request, res: Response) => {
+router.post('/:id/convert-to-invoice', 
+  authenticate,validate([body('invoiceDate').isISO8601().withMessage('Invoice date must be a valid date'),
+  body('dueDate').isISO8601().withMessage('Due date must be a valid date'),])
+  
+  
+, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { invoiceDate, dueDate } = req.body;

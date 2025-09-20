@@ -10,11 +10,9 @@ const router = Router();
 // @desc    Get balance sheet
 // @route   GET /api/reports/balance-sheet
 // @access  Private
-router.get('/balance-sheet', [
-  authenticate,
+router.get('/balance-sheet', authenticate, validate([
   query('asOfDate').optional().isISO8601().withMessage('As of date must be a valid date'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const asOfDate = req.query.asOfDate ? new Date(req.query.asOfDate as string) : new Date();
 
@@ -90,12 +88,11 @@ router.get('/balance-sheet', [
 // @desc    Get profit and loss statement
 // @route   GET /api/reports/profit-loss
 // @access  Private
-router.get('/profit-loss', [
-  authenticate,
-  query('startDate').isISO8601().withMessage('Start date must be a valid date'),
-  query('endDate').isISO8601().withMessage('End date must be a valid date'),
-  validate
-], async (req: Request, res: Response) => {
+router.get('/profit-loss', 
+  authenticate, validate([ query('startDate').isISO8601().withMessage('Start date must be a valid date'),
+    query('endDate').isISO8601().withMessage('End date must be a valid date'),])
+
+, async (req: Request, res: Response) => {
   try {
     const startDate = new Date(req.query.startDate as string);
     const endDate = new Date(req.query.endDate as string);
@@ -201,12 +198,12 @@ router.get('/profit-loss', [
 // @desc    Get stock statement
 // @route   GET /api/reports/stock-statement
 // @access  Private
-router.get('/stock-statement', [
-  authenticate,
-  query('asOfDate').optional().isISO8601().withMessage('As of date must be a valid date'),
-  query('productId').optional().isString().withMessage('Product ID must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.get('/stock-statement',
+  authenticate,validate([ query('asOfDate').optional().isISO8601().withMessage('As of date must be a valid date'),
+    query('productId').optional().isString().withMessage('Product ID must be a string'),])
+ 
+  
+, async (req: Request, res: Response) => {
   try {
     const asOfDate = req.query.asOfDate ? new Date(req.query.asOfDate as string) : new Date();
     const productId = req.query.productId as string;
@@ -308,13 +305,13 @@ router.get('/stock-statement', [
 // @desc    Get partner ledger
 // @route   GET /api/reports/partner-ledger
 // @access  Private
-router.get('/partner-ledger', [
-  authenticate,
-  query('contactId').isString().withMessage('Contact ID is required'),
-  query('startDate').optional().isISO8601().withMessage('Start date must be a valid date'),
-  query('endDate').optional().isISO8601().withMessage('End date must be a valid date'),
-  validate
-], async (req: Request, res: Response) => {
+router.get('/partner-ledger', 
+  authenticate,validate([query('contactId').isString().withMessage('Contact ID is required'),
+    query('startDate').optional().isISO8601().withMessage('Start date must be a valid date'),
+    query('endDate').optional().isISO8601().withMessage('End date must be a valid date'),
+    ])
+  
+, async (req: Request, res: Response) => {
   try {
     const contactId = req.query.contactId as string;
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
@@ -494,8 +491,10 @@ router.get('/dashboard', authenticate, async (req, res) => {
             in: ['UNPAID', 'PARTIAL']
           }
         },
-        _sum: { total: true },
-        _sum: { paidAmount: true }
+        _sum: { 
+          total: true,
+          paidAmount: true 
+        }
       }),
       prisma.vendorBill.aggregate({
         where: {
@@ -503,8 +502,10 @@ router.get('/dashboard', authenticate, async (req, res) => {
             in: ['UNPAID', 'PARTIAL']
           }
         },
-        _sum: { total: true },
-        _sum: { paidAmount: true }
+        _sum: { 
+          total: true,
+          paidAmount: true 
+        }
       })
     ]);
 
@@ -542,13 +543,13 @@ router.get('/dashboard', authenticate, async (req, res) => {
         total: totalPayments._sum.amount || 0
       },
       pending: {
-        receivables: (pendingReceivables._sum.total || 0) - (pendingReceivables._sum.paidAmount || 0),
-        payables: (pendingPayables._sum.total || 0) - (pendingPayables._sum.paidAmount || 0)
+        receivables: (pendingReceivables._sum.total ? pendingReceivables._sum.total.toNumber() : 0) - (pendingReceivables._sum.paidAmount ? pendingReceivables._sum.paidAmount.toNumber() : 0),
+        payables: (pendingPayables._sum.total ? pendingPayables._sum.total.toNumber() : 0) - (pendingPayables._sum.paidAmount ? pendingPayables._sum.paidAmount.toNumber() : 0)
       },
       profit: {
-        monthly: (monthlySales._sum.total || 0) - (monthlyPurchases._sum.total || 0),
-        yearly: (yearlySales._sum.total || 0) - (yearlyPurchases._sum.total || 0),
-        total: (totalSales._sum.total || 0) - (totalPurchases._sum.total || 0)
+        monthly: (monthlySales._sum.total ? monthlySales._sum.total.toNumber() : 0) - (monthlyPurchases._sum.total ? monthlyPurchases._sum.total.toNumber() : 0),
+        yearly: (yearlySales._sum.total ? yearlySales._sum.total.toNumber() : 0) - (yearlyPurchases._sum.total ? yearlyPurchases._sum.total.toNumber() : 0),
+        total: (totalSales._sum.total ? totalSales._sum.total.toNumber() : 0) - (totalPurchases._sum.total ? totalPurchases._sum.total.toNumber() : 0)
       }
     };
 

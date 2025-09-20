@@ -11,15 +11,13 @@ const router = Router();
 // @desc    Get all products
 // @route   GET /api/products
 // @access  Private
-router.get('/', [
-  authenticate,
+router.get('/', authenticate, validate([
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('type').optional().isIn(['GOODS', 'SERVICE']).withMessage('Invalid product type'),
   query('category').optional().isString().withMessage('Category must be a string'),
   query('search').optional().isString().withMessage('Search must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -96,8 +94,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // @desc    Create new product
 // @route   POST /api/products
 // @access  Private
-router.post('/', [
-  authenticate,
+router.post('/', authenticate, validate([
   body('name').trim().notEmpty().withMessage('Product name is required'),
   body('type').isIn(['GOODS', 'SERVICE']).withMessage('Invalid product type'),
   body('salesPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Sales price must be a valid decimal'),
@@ -106,8 +103,7 @@ router.post('/', [
   body('purchaseTaxPercent').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Purchase tax percent must be a valid decimal'),
   body('hsnCode').optional().isString().withMessage('HSN code must be a string'),
   body('category').optional().isString().withMessage('Category must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const {
       name,
@@ -152,18 +148,16 @@ router.post('/', [
 // @desc    Update product
 // @route   PUT /api/products/:id
 // @access  Private
-router.put('/:id', [
-  authenticate,
-  body('name').optional().trim().notEmpty().withMessage('Product name cannot be empty'),
-  body('type').optional().isIn(['GOODS', 'SERVICE']).withMessage('Invalid product type'),
-  body('salesPrice').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Sales price must be a valid decimal'),
-  body('purchasePrice').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Purchase price must be a valid decimal'),
-  body('salesTaxPercent').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Sales tax percent must be a valid decimal'),
-  body('purchaseTaxPercent').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Purchase tax percent must be a valid decimal'),
-  body('hsnCode').optional().isString().withMessage('HSN code must be a string'),
-  body('category').optional().isString().withMessage('Category must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+router.put('/:id', 
+  authenticate,validate([ body('name').optional().trim().notEmpty().withMessage('Product name cannot be empty'),
+    body('type').optional().isIn(['GOODS', 'SERVICE']).withMessage('Invalid product type'),
+    body('salesPrice').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Sales price must be a valid decimal'),
+    body('purchasePrice').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Purchase price must be a valid decimal'),
+    body('salesTaxPercent').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Sales tax percent must be a valid decimal'),
+    body('purchaseTaxPercent').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Purchase tax percent must be a valid decimal'),
+    body('hsnCode').optional().isString().withMessage('HSN code must be a string'),
+    body('category').optional().isString().withMessage('Category must be a string'),])
+, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -301,12 +295,11 @@ router.get('/stats', authenticate, async (req, res) => {
 // @desc    Bulk update products
 // @route   PUT /api/products/bulk-update
 // @access  Private
-router.put('/bulk-update', [
-  authenticate,
-  body('products').isArray().withMessage('Products must be an array'),
-  body('products.*.id').isString().withMessage('Product ID is required'),
-  validate
-], async (req: Request, res: Response) => {
+router.put('/bulk-update', 
+  authenticate,validate([ body('products').isArray().withMessage('Products must be an array'),
+    body('products.*.id').isString().withMessage('Product ID is required'),])
+
+, async (req: Request, res: Response) => {
   try {
     const { products } = req.body;
 

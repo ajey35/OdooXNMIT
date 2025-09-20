@@ -11,16 +11,14 @@ const router = Router();
 // @desc    Get all taxes
 // @route   GET /api/taxes
 // @access  Private
-router.get('/', [
-  authenticate,
+router.get('/', authenticate, validate([
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('computationMethod').optional().isIn(['PERCENTAGE', 'FIXED_VALUE']).withMessage('Invalid computation method'),
   query('applicableOnSales').optional().isBoolean().withMessage('Applicable on sales must be a boolean'),
   query('applicableOnPurchase').optional().isBoolean().withMessage('Applicable on purchase must be a boolean'),
   query('search').optional().isString().withMessage('Search must be a string'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -98,15 +96,13 @@ router.get('/:id', authenticate, async (req, res) => {
 // @desc    Create new tax
 // @route   POST /api/taxes
 // @access  Private
-router.post('/', [
-  authenticate,
-  body('name').trim().notEmpty().withMessage('Tax name is required'),
-  body('computationMethod').isIn(['PERCENTAGE', 'FIXED_VALUE']).withMessage('Invalid computation method'),
-  body('rate').isDecimal({ decimal_digits: '0,2' }).withMessage('Rate must be a valid decimal'),
-  body('applicableOnSales').optional().isBoolean().withMessage('Applicable on sales must be a boolean'),
-  body('applicableOnPurchase').optional().isBoolean().withMessage('Applicable on purchase must be a boolean'),
-  validate
-], async (req: Request, res: Response) => {
+router.post('/', 
+  authenticate,validate([ body('name').trim().notEmpty().withMessage('Tax name is required'),
+    body('computationMethod').isIn(['PERCENTAGE', 'FIXED_VALUE']).withMessage('Invalid computation method'),
+    body('rate').isDecimal({ decimal_digits: '0,2' }).withMessage('Rate must be a valid decimal'),
+    body('applicableOnSales').optional().isBoolean().withMessage('Applicable on sales must be a boolean'),
+    body('applicableOnPurchase').optional().isBoolean().withMessage('Applicable on purchase must be a boolean'),])
+, async (req: Request, res: Response) => {
   try {
     const {
       name,
@@ -145,15 +141,15 @@ router.post('/', [
 // @desc    Update tax
 // @route   PUT /api/taxes/:id
 // @access  Private
-router.put('/:id', [
-  authenticate,
-  body('name').optional().trim().notEmpty().withMessage('Tax name cannot be empty'),
-  body('computationMethod').optional().isIn(['PERCENTAGE', 'FIXED_VALUE']).withMessage('Invalid computation method'),
-  body('rate').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Rate must be a valid decimal'),
-  body('applicableOnSales').optional().isBoolean().withMessage('Applicable on sales must be a boolean'),
-  body('applicableOnPurchase').optional().isBoolean().withMessage('Applicable on purchase must be a boolean'),
-  validate
-], async (req: Request, res: Response) => {
+router.put('/:id', 
+  authenticate,validate([ body('name').optional().trim().notEmpty().withMessage('Tax name cannot be empty'),
+    body('computationMethod').optional().isIn(['PERCENTAGE', 'FIXED_VALUE']).withMessage('Invalid computation method'),
+    body('rate').optional().isDecimal({ decimal_digits: '0,2' }).withMessage('Rate must be a valid decimal'),
+    body('applicableOnSales').optional().isBoolean().withMessage('Applicable on sales must be a boolean'),
+    body('applicableOnPurchase').optional().isBoolean().withMessage('Applicable on purchase must be a boolean'),
+    ])
+ 
+, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -241,18 +237,19 @@ router.delete('/:id', authenticate, async (req, res) => {
 // @desc    Get taxes by type
 // @route   GET /api/taxes/by-type/:type
 // @access  Private
-router.get('/by-type/:type', [
-  authenticate,
-  validate
-], async (req: Request, res: Response) => {
+router.get('/by-type/:type', authenticate, async (req: Request, res: Response) => {
   try {
-    const { type } = req.params;
+    const typeParam = req.params.type;
 
-    if (!['sales', 'purchase'].includes(type)) {
+    // Check if type is provided and valid
+    if (!typeParam || !['sales', 'purchase'].includes(typeParam)) {
       return sendError(res, 'Invalid type. Must be "sales" or "purchase"', 400);
     }
 
-    const where = type === 'sales' 
+    // Narrow type to union type for TS safety
+    const type = typeParam as 'sales' | 'purchase';
+
+    const where = type === 'sales'
       ? { applicableOnSales: true }
       : { applicableOnPurchase: true };
 
@@ -267,6 +264,7 @@ router.get('/by-type/:type', [
     sendError(res, 'Failed to retrieve taxes by type', 500);
   }
 });
+
 
 // @desc    Get tax statistics
 // @route   GET /api/taxes/stats
@@ -297,12 +295,12 @@ router.get('/stats', authenticate, async (req, res) => {
 // @desc    Calculate tax amount
 // @route   POST /api/taxes/calculate
 // @access  Private
-router.post('/calculate', [
-  authenticate,
-  body('amount').isDecimal({ decimal_digits: '0,2' }).withMessage('Amount must be a valid decimal'),
+router.post('/calculate', 
+  authenticate,validate([body('amount').isDecimal({ decimal_digits: '0,2' }).withMessage('Amount must be a valid decimal'),
   body('taxId').isString().withMessage('Tax ID is required'),
-  validate
-], async (req: Request, res: Response) => {
+  ])
+  
+, async (req: Request, res: Response) => {
   try {
     const { amount, taxId } = req.body;
 

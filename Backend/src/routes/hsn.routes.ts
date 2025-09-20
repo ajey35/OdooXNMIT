@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { query } from 'express-validator';
+import { query, body } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
 import { sendSuccess, sendError } from '../utils/response.js';
@@ -11,13 +11,9 @@ const router = Router();
 // @desc    Search HSN codes
 // @route   GET /api/hsn/search
 // @access  Private
-router.get('/search', [
-  authenticate,
-  query('inputText').notEmpty().withMessage('Input text is required'),
-  query('selectedType').isIn(['byCode', 'byDesc']).withMessage('Selected type must be "byCode" or "byDesc"'),
-  query('category').isIn(['null', 'P', 'S']).withMessage('Category must be "null", "P", or "S"'),
-  validate
-], async (req: Request, res: Response) => {
+router.get('/search', authenticate,validate([ query('inputText').notEmpty().withMessage('Input text is required'),
+    query('selectedType').isIn(['byCode', 'byDesc']).withMessage('Selected type must be "byCode" or "byDesc"'),
+    query('category').isIn(['null', 'P', 'S']).withMessage('Category must be "null", "P", or "S"')]), async (req: Request, res: Response) => {
   try {
     const { inputText, selectedType, category } = req.query;
 
@@ -38,9 +34,9 @@ router.get('/search', [
     }
 
     // Call external HSN API
-    const hsnApiUrl = process.env.HSN_API_BASE_URL || 'https://services.gst.gov.in/commonservices/hsn/search';
+    const hsnApiUrl = process.env.HSN_API_BASE_URL || 'https://services.gst.gov.in/commonservices/hsn/search/qsearch';
     
-    const response = await axios.get(`${hsnApiUrl}/qsearch`, {
+    const response = await axios.get(hsnApiUrl, {
       params: {
         inputText,
         selectedType,
@@ -53,7 +49,7 @@ router.get('/search', [
       const hsnCodes = response.data.data.map((item: any) => ({
         code: item.c,
         description: item.n,
-        category: category === 'P' ? 'PRODUCT' : category === 'S' ? 'SERVICE' : null
+        category: category === 'P' ? 'PRODUCT' : category === 'S' ? 'SERVICE' : 'GENERAL'
       }));
 
       // Cache the results
@@ -77,10 +73,10 @@ router.get('/search', [
       if (error.code === 'ECONNABORTED') {
         return sendError(res, 'HSN API request timeout', 408);
       }
-      if (error.response?.status === 404) {
+      if (error.response && error.response.status === 404) {
         return sendError(res, 'HSN API not found', 404);
       }
-      if (error.response?.status >= 500) {
+      if (error.response && error.response.status >= 500) {
         return sendError(res, 'HSN API server error', 502);
       }
     }
@@ -114,14 +110,14 @@ router.get('/code/:code', authenticate, async (req, res) => {
 // @desc    Get cached HSN codes
 // @route   GET /api/hsn/cached
 // @access  Private
-router.get('/cached', [
-  authenticate,
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-  query('search').optional().isString().withMessage('Search must be a string'),
-  query('category').optional().isIn(['PRODUCT', 'SERVICE']).withMessage('Invalid category'),
-  validate
-], async (req: Request, res: Response) => {
+router.get('/cached', 
+  authenticate,validate([ query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+    query('search').optional().isString().withMessage('Search must be a string'),
+    query('category').optional().isIn(['PRODUCT', 'SERVICE']).withMessage('Invalid category'),])
+ 
+  
+, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -206,16 +202,14 @@ router.get('/stats', authenticate, async (req, res) => {
 // @desc    Validate HSN code
 // @route   POST /api/hsn/validate
 // @access  Private
-router.post('/validate', [
+router.post('/validate', 
   authenticate,
-  validate
-], async (req: Request, res: Response) => {
+  validate([
+    body('code').notEmpty().withMessage('HSN code is required')
+  ]),
+  async (req: Request, res: Response) => {
   try {
     const { code } = req.body;
-
-    if (!code) {
-      return sendError(res, 'HSN code is required', 400);
-    }
 
     // Check if code exists in cache
     const cachedCode = await prisma.hsnCode.findFirst({
@@ -234,9 +228,9 @@ router.post('/validate', [
 
     // If not in cache, try to fetch from API
     try {
-      const hsnApiUrl = process.env.HSN_API_BASE_URL || 'https://services.gst.gov.in/commonservices/hsn/search';
+      const hsnApiUrl = process.env.HSN_API_BASE_URL || 'https://services.gst.gov.in/commonservices/hsn/search/qsearch';
       
-      const response = await axios.get(`${hsnApiUrl}/qsearch`, {
+      const response = await axios.get(hsnApiUrl, {
         params: {
           inputText: code,
           selectedType: 'byCode',
@@ -253,14 +247,14 @@ router.post('/validate', [
           data: {
             code: hsnData.c,
             description: hsnData.n,
-            category: null
+            category: 'GENERAL'
           }
         });
 
         return sendSuccess(res, 'HSN code is valid', {
           code: hsnData.c,
           description: hsnData.n,
-          category: null,
+          category: 'GENERAL',
           isValid: true,
           source: 'api'
         });
