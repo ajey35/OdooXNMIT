@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { query } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -14,7 +14,7 @@ router.get('/balance-sheet', [
   authenticate,
   query('asOfDate').optional().isISO8601().withMessage('As of date must be a valid date'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const asOfDate = req.query.asOfDate ? new Date(req.query.asOfDate as string) : new Date();
 
@@ -95,7 +95,7 @@ router.get('/profit-loss', [
   query('startDate').isISO8601().withMessage('Start date must be a valid date'),
   query('endDate').isISO8601().withMessage('End date must be a valid date'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const startDate = new Date(req.query.startDate as string);
     const endDate = new Date(req.query.endDate as string);
@@ -206,7 +206,7 @@ router.get('/stock-statement', [
   query('asOfDate').optional().isISO8601().withMessage('As of date must be a valid date'),
   query('productId').optional().isString().withMessage('Product ID must be a string'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const asOfDate = req.query.asOfDate ? new Date(req.query.asOfDate as string) : new Date();
     const productId = req.query.productId as string;
@@ -314,7 +314,7 @@ router.get('/partner-ledger', [
   query('startDate').optional().isISO8601().withMessage('Start date must be a valid date'),
   query('endDate').optional().isISO8601().withMessage('End date must be a valid date'),
   validate
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const contactId = req.query.contactId as string;
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;

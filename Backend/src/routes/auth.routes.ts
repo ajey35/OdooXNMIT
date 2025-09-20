@@ -13,17 +13,19 @@ const router = Router();
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
-router.post('/register', [
-  body('name').trim().notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Please provide a valid email'),
-  body('loginId').trim().notEmpty().withMessage('Login ID is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').optional().isIn(['ADMIN', 'INVOICING_USER', 'CONTACT']).withMessage('Invalid role'),
-  validate
-], async (req: Request, res: Response) => {
+router.post('/register',
+   validate([
+    body('name').trim().notEmpty().withMessage('Name is required'),
+    body('email').isEmail().withMessage('Please provide a valid email'),
+    body('loginId').trim().notEmpty().withMessage('Login ID is required'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('role').optional().isIn(['ADMIN', 'INVOICING_USER', 'CONTACT']).withMessage('Invalid role')
+  ]),
+ async (req: Request, res: Response) => {
   try {
     const { name, email, loginId, password, role = 'INVOICING_USER' } = req.body;
-
+    console.log("req.body",req.body);
+    
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -73,7 +75,7 @@ router.post('/register', [
       email: user.email,
       role: user.role
     });
-
+    
     sendSuccess(res, 'User registered successfully', {
       user,
       token,
@@ -84,17 +86,48 @@ router.post('/register', [
     sendError(res, 'Registration failed', 500);
   }
 });
+// router.post('/register', async (req: Request, res: Response) => {
+//   console.log('Request received at /register');
+//   try {
+//     const { name, email, loginId, password, role = 'INVOICING_USER' } = req.body;
+//     console.log('Body:', req.body);
+
+//     const existingUser = await prisma.user.findFirst({
+//       where: { OR: [{ email }, { loginId }] }
+//     });
+//     console.log('Existing user check done:', existingUser);
+
+//     const hashedPassword = await hashPassword(password);
+//     console.log('Password hashed');
+
+//     const user = await prisma.user.create({
+//       data: { name, email, loginId, password: hashedPassword, role: role as any },
+//       select: { id: true, name: true, email: true, loginId: true, role: true, status: true, createdAt: true }
+//     });
+//     console.log('User created:', user);
+
+//     const token = generateToken({ id: user.id, email: user.email, role: user.role });
+//     const refreshToken = generateRefreshToken({ id: user.id, email: user.email, role: user.role });
+//     console.log('Tokens generated');
+
+//     res.json({ user, token, refreshToken });
+//   } catch (error) {
+//     console.error('Registration error:', error);
+//     res.status(500).json({ error: 'Registration failed' });
+//   }
+// });
 
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
-router.post('/login', [
+router.post('/login', validate([
   body('loginId').trim().notEmpty().withMessage('Login ID is required'),
   body('password').notEmpty().withMessage('Password is required'),
-  validate
-], async (req: Request, res: Response) => {
+]),async (req: Request, res: Response) => {
   try {
     const { loginId, password } = req.body;
+    console.log("inside",loginId);
+    
 
     // Find user by loginId or email
     const user = await prisma.user.findFirst({
@@ -166,6 +199,8 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         updatedAt: true
       }
     });
+    console.log("fuck user",user);
+    
 
     if (!user) {
       return sendError(res, 'User not found', 404);
@@ -181,12 +216,10 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
 // @desc    Update user profile
 // @route   PUT /api/auth/profile
 // @access  Private
-router.put('/profile', [
-  authenticate,
+router.put('/profile',  authenticate,validate([
   body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
   body('email').optional().isEmail().withMessage('Please provide a valid email'),
-  validate
-], async (req: AuthRequest, res: Response) => {
+]), async (req: AuthRequest, res: Response) => {
   try {
     const { name, email } = req.body;
     const updateData: any = {};
@@ -218,12 +251,12 @@ router.put('/profile', [
 // @desc    Change password
 // @route   PUT /api/auth/change-password
 // @access  Private
-router.put('/change-password', [
-  authenticate,
+router.put('/change-password', authenticate,validate([
+        
   body('currentPassword').notEmpty().withMessage('Current password is required'),
   body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
-  validate
-], async (req: AuthRequest, res: Response) => {
+]), async (req: AuthRequest, res: Response) => {
+
   try {
     const { currentPassword, newPassword } = req.body;
 
@@ -261,7 +294,7 @@ router.put('/change-password', [
 // @desc    Get all users (Admin only)
 // @route   GET /api/auth/users
 // @access  Private (Admin)
-router.get('/users', [authenticate, authorize('ADMIN')], async (req: AuthRequest, res: Response) => {
+router.get('/users', authenticate, authorize('ADMIN'), async (req: AuthRequest, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -303,12 +336,10 @@ router.get('/users', [authenticate, authorize('ADMIN')], async (req: AuthRequest
 // @desc    Update user status (Admin only)
 // @route   PUT /api/auth/users/:id/status
 // @access  Private (Admin)
-router.put('/users/:id/status', [
-  authenticate,
-  authorize('ADMIN'),
+router.put('/users/:id/status', authenticate, authorize('ADMIN'), validate([
   body('status').isIn(['ACTIVE', 'INACTIVE', 'SUSPENDED']).withMessage('Invalid status'),
-  validate
-], async (req: Request, res: Response) => {
+]), async (req: Request, res: Response) => {
+
   try {
     const { id } = req.params;
     const { status } = req.body;
