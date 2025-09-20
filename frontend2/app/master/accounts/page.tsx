@@ -8,6 +8,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Plus, Edit, Trash2 } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { apiClient } from "../../../lib/api"
+import { AccountForm } from "../../../components/forms/account-form"
 
 interface ChartOfAccount {
   id: string
@@ -18,7 +19,10 @@ interface ChartOfAccount {
   createdAt: string
 }
 
-const columns: ColumnDef<ChartOfAccount>[] = [
+const createColumns = (
+  onEdit: (account: ChartOfAccount) => void,
+  onDelete: (id: string) => void
+): ColumnDef<ChartOfAccount>[] => [
   {
     accessorKey: "code",
     header: "Code",
@@ -49,12 +53,13 @@ const columns: ColumnDef<ChartOfAccount>[] = [
     id: "actions",
     header: "Actions",
     cell: ({ row }) => {
+      const account = row.original
       return (
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => onEdit(account)}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => onDelete(account.id)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -66,6 +71,8 @@ const columns: ColumnDef<ChartOfAccount>[] = [
 export default function ChartOfAccountsPage() {
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<ChartOfAccount | null>(null)
 
   useEffect(() => {
     loadAccounts()
@@ -134,11 +141,38 @@ export default function ChartOfAccountsPage() {
     }
   }
 
+  const handleCreateAccount = () => {
+    setEditingAccount(null)
+    setFormOpen(true)
+  }
+
+  const handleEditAccount = (account: ChartOfAccount) => {
+    setEditingAccount(account)
+    setFormOpen(true)
+  }
+
+  const handleDeleteAccount = async (id: string) => {
+    if (confirm("Are you sure you want to delete this account?")) {
+      try {
+        await apiClient.deleteAccount(id)
+        await loadAccounts()
+      } catch (error) {
+        console.error("Failed to delete account:", error)
+      }
+    }
+  }
+
+  const handleFormSuccess = () => {
+    loadAccounts()
+  }
+
+  const columns = createColumns(handleEditAccount, handleDeleteAccount)
+
   return (
     <DashboardLayout
       title="Chart of Accounts"
       headerActions={
-        <Button>
+        <Button onClick={handleCreateAccount}>
           <Plus className="mr-2 h-4 w-4" />
           New Account
         </Button>
@@ -156,6 +190,13 @@ export default function ChartOfAccountsPage() {
           <DataTable columns={columns} data={accounts} searchKey="name" searchPlaceholder="Search accounts..." />
         )}
       </div>
+
+      <AccountForm
+        openDialog={formOpen}
+        setOpenDialog={setFormOpen}
+        account={editingAccount}
+        onSuccess={handleFormSuccess}
+      />
     </DashboardLayout>
   )
 }

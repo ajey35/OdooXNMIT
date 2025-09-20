@@ -8,6 +8,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Plus, Edit, Trash2 } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { apiClient } from "../../../lib/api"
+import { TaxForm } from "../../../components/forms/tax-form"
 
 interface Tax {
   id: string
@@ -19,7 +20,7 @@ interface Tax {
   createdAt: string
 }
 
-const columns: ColumnDef<Tax>[] = [
+const createColumns = (handleEditTax: (tax: Tax) => void): ColumnDef<Tax>[] => [
   {
     accessorKey: "name",
     header: "Tax Name",
@@ -63,7 +64,7 @@ const columns: ColumnDef<Tax>[] = [
     cell: ({ row }) => {
       return (
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => handleEditTax(row.original)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon">
@@ -78,6 +79,8 @@ const columns: ColumnDef<Tax>[] = [
 export default function TaxesPage() {
   const [taxes, setTaxes] = useState<Tax[]>([])
   const [loading, setLoading] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingTax, setEditingTax] = useState<Tax | null>(null)
 
   useEffect(() => {
     loadTaxes()
@@ -133,11 +136,30 @@ export default function TaxesPage() {
     }
   }
 
+  const handleNewTax = () => {
+    setEditingTax(null)
+    setIsFormOpen(true)
+  }
+
+  const handleEditTax = (tax: Tax) => {
+    setEditingTax(tax)
+    setIsFormOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    loadTaxes()
+  }
+
+  const handleFormClose = () => {
+    setIsFormOpen(false)
+    setEditingTax(null)
+  }
+
   return (
     <DashboardLayout
       title="Tax Master"
       headerActions={
-        <Button>
+        <Button onClick={handleNewTax}>
           <Plus className="mr-2 h-4 w-4" />
           New Tax
         </Button>
@@ -152,9 +174,16 @@ export default function TaxesPage() {
             </div>
           </div>
         ) : (
-          <DataTable columns={columns} data={taxes} searchKey="name" searchPlaceholder="Search taxes..." />
+          <DataTable columns={createColumns(handleEditTax)} data={taxes} searchKey="name" searchPlaceholder="Search taxes..." />
         )}
       </div>
+      
+      <TaxForm
+        isOpen={isFormOpen}
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+        tax={editingTax}
+      />
     </DashboardLayout>
   )
 }

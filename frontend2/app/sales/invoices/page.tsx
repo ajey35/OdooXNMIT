@@ -8,6 +8,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Plus, Edit, Trash2, CreditCard } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { apiClient } from "../../../lib/api"
+import { CustomerInvoiceForm } from "../../../components/forms/customer-invoice-form"
 
 interface CustomerInvoice {
   id: string
@@ -77,7 +78,7 @@ const columns: ColumnDef<CustomerInvoice>[] = [
               <CreditCard className="h-4 w-4" />
             </Button>
           )}
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => handleEditInvoice(row.original)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon">
@@ -92,6 +93,8 @@ const columns: ColumnDef<CustomerInvoice>[] = [
 export default function CustomerInvoicesPage() {
   const [invoices, setInvoices] = useState<CustomerInvoice[]>([])
   const [loading, setLoading] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingInvoice, setEditingInvoice] = useState<CustomerInvoice | null>(null)
 
   useEffect(() => {
     loadInvoices()
@@ -137,11 +140,30 @@ export default function CustomerInvoicesPage() {
     }
   }
 
+  const handleNewInvoice = () => {
+    setEditingInvoice(null)
+    setIsFormOpen(true)
+  }
+
+  const handleEditInvoice = (invoice: CustomerInvoice) => {
+    setEditingInvoice(invoice)
+    setIsFormOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    loadInvoices()
+  }
+
+  const handleFormClose = () => {
+    setIsFormOpen(false)
+    setEditingInvoice(null)
+  }
+
   return (
     <DashboardLayout
       title="Customer Invoices"
       headerActions={
-        <Button>
+        <Button onClick={handleNewInvoice}>
           <Plus className="mr-2 h-4 w-4" />
           New Customer Invoice
         </Button>
@@ -164,6 +186,13 @@ export default function CustomerInvoicesPage() {
           />
         )}
       </div>
+      
+      <CustomerInvoiceForm
+        isOpen={isFormOpen}
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+        invoice={editingInvoice}
+      />
     </DashboardLayout>
   )
 }

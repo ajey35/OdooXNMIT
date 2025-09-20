@@ -8,6 +8,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Plus, Edit, Trash2, FileText } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { apiClient } from "../../../lib/api"
+import { SalesOrderForm } from "../../../components/forms/sales-order-form"
 
 interface SalesOrder {
   id: string
@@ -65,7 +66,7 @@ const columns: ColumnDef<SalesOrder>[] = [
           <Button variant="ghost" size="icon">
             <FileText className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => handleEditOrder(row.original)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon">
@@ -80,6 +81,8 @@ const columns: ColumnDef<SalesOrder>[] = [
 export default function SalesOrdersPage() {
   const [orders, setOrders] = useState<SalesOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingOrder, setEditingOrder] = useState<SalesOrder | null>(null)
 
   useEffect(() => {
     loadOrders()
@@ -123,11 +126,30 @@ export default function SalesOrdersPage() {
     }
   }
 
+  const handleNewOrder = () => {
+    setEditingOrder(null)
+    setIsFormOpen(true)
+  }
+
+  const handleEditOrder = (order: SalesOrder) => {
+    setEditingOrder(order)
+    setIsFormOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    loadOrders()
+  }
+
+  const handleFormClose = () => {
+    setIsFormOpen(false)
+    setEditingOrder(null)
+  }
+
   return (
     <DashboardLayout
       title="Sales Orders"
       headerActions={
-        <Button>
+        <Button onClick={handleNewOrder}>
           <Plus className="mr-2 h-4 w-4" />
           New Sales Order
         </Button>
@@ -145,6 +167,13 @@ export default function SalesOrdersPage() {
           <DataTable columns={columns} data={orders} searchKey="soNumber" searchPlaceholder="Search sales orders..." />
         )}
       </div>
+      
+      <SalesOrderForm
+        isOpen={isFormOpen}
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+        order={editingOrder}
+      />
     </DashboardLayout>
   )
 }

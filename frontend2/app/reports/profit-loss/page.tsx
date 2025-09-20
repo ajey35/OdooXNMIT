@@ -47,10 +47,27 @@ export default function ProfitLossPage() {
   const loadProfitLoss = async () => {
     try {
       const response = await apiClient.getProfitLoss(startDate, endDate)
-      setProfitLoss(response.data)
+      const data = response.data
+      // Ensure profit margin is calculated if not provided
+      if (data && data.income && data.expenses) {
+        const netProfit = data.netProfit || (data.income.total - data.expenses.total)
+        const profitMargin = data.profitMargin || (data.income.total > 0 ? (netProfit / data.income.total) * 100 : 0)
+        setProfitLoss({
+          ...data,
+          netProfit,
+          profitMargin
+        })
+      } else {
+        setProfitLoss(data)
+      }
     } catch (error) {
       console.error("Failed to load profit & loss:", error)
       // Mock data for demo
+      const incomeTotal = 1025000
+      const expensesTotal = 775000
+      const netProfit = incomeTotal - expensesTotal
+      const profitMargin = (netProfit / incomeTotal) * 100
+      
       setProfitLoss({
         startDate: startDate,
         endDate: endDate,
@@ -60,7 +77,7 @@ export default function ProfitLossPage() {
             { name: "Service Income", amount: 150000 },
             { name: "Other Income", amount: 25000 },
           ],
-          total: 1025000,
+          total: incomeTotal,
         },
         expenses: {
           items: [
@@ -77,11 +94,11 @@ export default function ProfitLossPage() {
             },
             { name: "Other Expenses", amount: 15000 },
           ],
-          total: 775000,
+          total: expensesTotal,
         },
         grossProfit: 575000,
-        netProfit: 250000,
-        profitMargin: 24.39,
+        netProfit: netProfit,
+        profitMargin: profitMargin,
       })
     } finally {
       setLoading(false)
@@ -226,7 +243,9 @@ export default function ProfitLossPage() {
                   >
                     {formatCurrency(profitLoss.netProfit)}
                   </div>
-                  <p className="text-xs text-muted-foreground">{profitLoss.profitMargin.toFixed(2)}% profit margin</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(profitLoss.profitMargin ?? 0).toFixed(2)}% profit margin
+                  </p>
                 </CardContent>
               </Card>
             </div>

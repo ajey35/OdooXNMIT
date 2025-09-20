@@ -8,6 +8,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Plus, Edit, Trash2, FileText } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { apiClient } from "../../../lib/api"
+import { PurchaseOrderForm } from "../../../components/forms/purchase-order-form"
 
 interface PurchaseOrder {
   id: string
@@ -22,7 +23,7 @@ interface PurchaseOrder {
   createdAt: string
 }
 
-const columns: ColumnDef<PurchaseOrder>[] = [
+const createColumns = (handleEditOrder: (order: PurchaseOrder) => void): ColumnDef<PurchaseOrder>[] => [
   {
     accessorKey: "poNumber",
     header: "PO Number",
@@ -65,7 +66,7 @@ const columns: ColumnDef<PurchaseOrder>[] = [
           <Button variant="ghost" size="icon">
             <FileText className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => handleEditOrder(row.original)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon">
@@ -80,6 +81,8 @@ const columns: ColumnDef<PurchaseOrder>[] = [
 export default function PurchaseOrdersPage() {
   const [orders, setOrders] = useState<PurchaseOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null)
 
   useEffect(() => {
     loadOrders()
@@ -123,11 +126,30 @@ export default function PurchaseOrdersPage() {
     }
   }
 
+  const handleNewOrder = () => {
+    setEditingOrder(null)
+    setIsFormOpen(true)
+  }
+
+  const handleEditOrder = (order: PurchaseOrder) => {
+    setEditingOrder(order)
+    setIsFormOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    loadOrders()
+  }
+
+  const handleFormClose = () => {
+    setIsFormOpen(false)
+    setEditingOrder(null)
+  }
+
   return (
     <DashboardLayout
       title="Purchase Orders"
       headerActions={
-        <Button>
+        <Button onClick={handleNewOrder}>
           <Plus className="mr-2 h-4 w-4" />
           New Purchase Order
         </Button>
@@ -143,13 +165,20 @@ export default function PurchaseOrdersPage() {
           </div>
         ) : (
           <DataTable
-            columns={columns}
+            columns={createColumns(handleEditOrder)}
             data={orders}
             searchKey="poNumber"
             searchPlaceholder="Search purchase orders..."
           />
         )}
       </div>
+      
+      <PurchaseOrderForm
+        isOpen={isFormOpen}
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+        order={editingOrder}
+      />
     </DashboardLayout>
   )
 }
