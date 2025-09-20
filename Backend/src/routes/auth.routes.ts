@@ -7,6 +7,7 @@ import { validate } from '../middleware/validation.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { hashPassword, comparePassword, generateToken, generateRefreshToken } from '../utils/helpers.js';
 import prisma from '../lib/prisma.js';
+import { log } from 'console';
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.post('/register',
   try {
     const { name, email, loginId, password, role = 'INVOICING_USER' } = req.body;
     console.log("req.body",req.body);
+    console.log("prisma",prisma);
     
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
