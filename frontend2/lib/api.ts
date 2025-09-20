@@ -270,6 +270,7 @@ class ApiClient {
       method: "DELETE",
     })
   }
+  // Chart of Accounts endpoints
 
   // Dashboard endpoints
   async getDashboardStats() {
