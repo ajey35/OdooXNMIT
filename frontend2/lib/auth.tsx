@@ -24,6 +24,9 @@ interface AuthContextType {
   }) => Promise<void>
   logout: () => void
   isAuthenticated: boolean
+  forgotPassword: (email: string) => Promise<void>
+  verifyOtp: (email: string, otp: string) => Promise<void>
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -122,15 +125,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null)
   }
+  // ✅ Forgot Password flow
+  const forgotPassword = async (email: string) => {
+    try {
+      await apiClient.forgotPassword(email)
+    } catch (error) {
+      // Optionally handle error, e.g. log or rethrow
+      throw error
+    }
+  }
 
-  const value = {
+  const verifyOtp = async (email: string, otp: string) => {
+    try {
+      await apiClient.verifyOtp(email, otp)
+    } catch (error) {
+      // Optionally handle error, e.g. log or rethrow
+      throw error
+    }
+  }
+
+  const resetPassword = async (email: string, otp: string, newPassword: string) => {
+    await apiClient.resetPassword(email, otp, newPassword)
+  }
+
+  // ✅ Now all functions are defined before value
+  const value: AuthContextType = {
     user,
     loading,
     login,
     register,
     logout,
     isAuthenticated: !!user,
+    forgotPassword,
+    verifyOtp,
+    resetPassword,
   }
+
 
   return (
     <AuthContext.Provider value={value}>
@@ -146,3 +176,5 @@ export function useAuth() {
   }
   return context
 }
+
+export default AuthContext
