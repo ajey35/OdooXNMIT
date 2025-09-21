@@ -1,5 +1,4 @@
 # OdooXNMIT - Modern Accounting & ERP System
-
 ![Live Demo Video](https://drive.google.com/drive/folders/1ULSGkqhdCqsNNy_yAeyI1P7RlghuMOVX)
 
 A comprehensive, full-stack accounting and ERP system built with modern technologies. This project provides a complete solution for managing sales, purchases, inventory, contacts, and financial reporting.
