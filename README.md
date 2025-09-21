@@ -1,8 +1,10 @@
 # OdooXNMIT - Modern Accounting & ERP System
 
+![Live Demo Video](https://drive.google.com/drive/folders/1ULSGkqhdCqsNNy_yAeyI1P7RlghuMOVX)
+
 A comprehensive, full-stack accounting and ERP system built with modern technologies. This project provides a complete solution for managing sales, purchases, inventory, contacts, and financial reporting.
 
-## 🚀 Features
+## Features
 
 ### Core Modules
 - **Sales Management**: Sales orders, customer invoices, payments
@@ -22,7 +24,7 @@ A comprehensive, full-stack accounting and ERP system built with modern technolo
 -  **Tax Management** with GST integration
 -  **Data Tables** with filtering, searching, and sorting
 
-## 🏗️ Architecture
+##  Architecture
 
 ### Backend (`/Backend`)
 - **Runtime**: Bun (TypeScript-first JavaScript runtime)
@@ -41,7 +43,7 @@ A comprehensive, full-stack accounting and ERP system built with modern technolo
 - **Charts**: Recharts for data visualization
 - **Forms**: React Hook Form with Zod validation
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 OdooXNMIT/
@@ -95,7 +97,7 @@ OdooXNMIT/
 └── README.md
 ```
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Backend Technologies
 - **Bun** - Fast JavaScript runtime and package manager
@@ -183,7 +185,7 @@ NEXT_PUBLIC_API_URL="http://localhost:5000/api"
 NEXT_PUBLIC_APP_NAME="OdooXNMIT"
 ```
 
-## 🏃‍♂️ Running the Application
+## Running the Application
 
 ### Development Mode
 
@@ -251,7 +253,7 @@ The API documentation is available via Swagger UI when running the backend:
 - `GET /api/reports/partner-ledger` - Partner ledger
 - `GET /api/reports/stock-statement` - Stock statement
 
-## 🗄️ Database Schema
+## 🗄 Database Schema
 
 ### Key Models
 - **User** - System users with role-based access
@@ -271,7 +273,7 @@ The API documentation is available via Swagger UI when running the backend:
 - **Relationships** with proper foreign keys
 - **Enums** for status and type management
 
-## 🧪 Testing
+## Testing
 
 ### Backend Testing
 ```bash
@@ -288,7 +290,7 @@ bun run test              # Run tests
 bun run test:watch        # Watch mode
 ```
 
-## 📦 Available Scripts
+## Available Scripts
 
 ### Backend Scripts
 ```bash
@@ -312,7 +314,7 @@ bun run start            # Start production server
 bun run lint             # Lint code
 ```
 
-## 🎨 UI Components
+##  UI Components
 
 The project uses a comprehensive UI component library built on Radix UI primitives:
 
@@ -416,7 +418,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Shiv Accounts Cloud** - *Initial work*
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Built with modern web technologies
 - UI components from Radix UI
