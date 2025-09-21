@@ -13,6 +13,9 @@ interface ApiResponse<T = any> {
 }
 
 class ApiClient {
+  get(arg0: string, arg1: { params: { asOfDate: string } }) {
+    throw new Error("Method not implemented.")
+  }
   private baseURL: string
   private token: string | null = null
 

@@ -1,6 +1,5 @@
 "use client"
-import React from "react"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { DashboardLayout } from "../../../components/layout/dashboard-layout"
 import { Button } from "../../../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card"
@@ -38,66 +37,24 @@ export default function BalanceSheetPage() {
   const [balanceSheet, setBalanceSheet] = useState<BalanceSheetData | null>(null)
   const [loading, setLoading] = useState(true)
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split("T")[0])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadBalanceSheet()
   }, [])
 
   const loadBalanceSheet = async () => {
+    setLoading(true)
+    setError(null)
     try {
-      const response = await apiClient.getBalanceSheet(asOfDate)
-      setBalanceSheet(response.data)
-    } catch (error) {
-      console.error("Failed to load balance sheet:", error)
-      // Mock data for demo
-      setBalanceSheet({
-        asOfDate: asOfDate,
-        assets: {
-          items: [
-            {
-              name: "Current Assets",
-              amount: 0,
-              children: [
-                { name: "Cash Account", amount: 150000 },
-                { name: "Bank Account", amount: 500000 },
-                { name: "Debtors Account", amount: 250000 },
-              ],
-            },
-            {
-              name: "Fixed Assets",
-              amount: 0,
-              children: [
-                { name: "Office Equipment", amount: 200000 },
-                { name: "Furniture & Fixtures", amount: 150000 },
-              ],
-            },
-          ],
-          total: 1250000,
-        },
-        liabilities: {
-          items: [
-            {
-              name: "Current Liabilities",
-              amount: 0,
-              children: [
-                { name: "Creditors Account", amount: 180000 },
-                { name: "Tax Payable", amount: 45000 },
-              ],
-            },
-            { name: "Long Term Liabilities", amount: 0, children: [{ name: "Bank Loan", amount: 300000 }] },
-          ],
-          total: 525000,
-        },
-        equity: {
-          items: [
-            { name: "Owner's Equity", amount: 500000 },
-            { name: "Retained Earnings", amount: 225000 },
-          ],
-          total: 725000,
-        },
-        totalLiabilitiesAndEquity: 1250000,
-        isBalanced: true,
+      // ✅ API call to backend
+      const response = await apiClient.get(`/reports/balance-sheet`, {
+        params: { asOfDate },
       })
+      setBalanceSheet(response.data)
+    } catch (err: any) {
+      console.error("Failed to load balance sheet:", err)
+      setError("Unable to load balance sheet. Please try again later.")
     } finally {
       setLoading(false)
     }
@@ -218,6 +175,11 @@ export default function BalanceSheetPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Error */}
+        {error && (
+          <div className="text-center text-red-500 font-medium">{error}</div>
+        )}
 
         {/* Balance Sheet Report */}
         {loading ? (

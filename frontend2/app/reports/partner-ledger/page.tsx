@@ -1,6 +1,6 @@
 "use client"
-import React from "react"
-import { useState, useEffect } from "react"
+
+import React, { useState, useEffect } from "react"
 import { DashboardLayout } from "../../../components/layout/dashboard-layout"
 import { Button } from "../../../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card"
@@ -14,6 +14,7 @@ import { apiClient } from "../../../lib/api"
 import { useToast } from "../../../hooks/use-toast"
 import type { ColumnDef } from "@tanstack/react-table"
 
+// ------------------- Types -------------------
 interface PartnerLedgerEntry {
   id: string
   date: string
@@ -40,6 +41,7 @@ interface PartnerLedgerData {
   totalCredit: number
 }
 
+// ------------------- Table Columns -------------------
 const columns: ColumnDef<PartnerLedgerEntry>[] = [
   {
     accessorKey: "date",
@@ -49,24 +51,7 @@ const columns: ColumnDef<PartnerLedgerEntry>[] = [
       return date.toLocaleDateString()
     },
   },
-  {
-    accessorKey: "referenceNumber",
-    header: "Reference",
-    cell: ({ row }) => {
-      const refType = row.original.referenceType
-      const refNumber = row.getValue("referenceNumber") as string
-      return (
-        <div>
-          <div className="font-medium">{refNumber}</div>
-          <div className="text-xs text-muted-foreground">{refType}</div>
-        </div>
-      )
-    },
-  },
-  {
-    accessorKey: "description",
-    header: "Description",
-  },
+
   {
     accessorKey: "debitAmount",
     header: "Debit",
@@ -97,12 +82,12 @@ const columns: ColumnDef<PartnerLedgerEntry>[] = [
   },
 ]
 
+// ------------------- Page Component -------------------
 export default function PartnerLedgerPage() {
   const [ledgerData, setLedgerData] = useState<PartnerLedgerData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [contacts, setContacts] = useState<any[]>([])
   const [startDate, setStartDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0]
   )
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0])
   const [selectedPartner, setSelectedPartner] = useState<string>("")
@@ -120,25 +105,6 @@ export default function PartnerLedgerPage() {
 
   const loadContacts = async () => {
     try {
-      const response = await apiClient.getContacts({ type: "BOTH" })
-      setContacts(response.data || [])
-    } catch (error) {
-      console.error("Failed to load contacts:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load contacts",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const loadPartnerLedger = async () => {
-    if (!selectedPartner) return
-
-    try {
-      setLoading(true)
-      const response = await apiClient.getPartnerLedger(selectedPartner, startDate, endDate)
-      setLedgerData(response.data)
     } catch (error) {
       console.error("Failed to load partner ledger:", error)
       toast({
@@ -189,36 +155,10 @@ export default function PartnerLedgerPage() {
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 0,
     }).format(amount)
-  }
-
-  const handlePrint = () => {
-    window.print()
-  }
-
-  const handleExport = () => {
-    if (!ledgerData) return
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      "Date,Reference,Description,Debit,Credit,Balance\n" +
-      ledgerData.entries.map((entry) => 
-        `${entry.date},${entry.referenceNumber},${entry.description},${entry.debitAmount},${entry.creditAmount},${entry.balance}`
-      ).join("\n")
-
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", `partner_ledger_${ledgerData.partner.name.replace(/\s+/g, '_')}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 
   return (
     <DashboardLayout
@@ -237,7 +177,7 @@ export default function PartnerLedgerPage() {
       }
     >
       <div className="space-y-6">
-        {/* Filters */}
+        {/* ------------------- Filters ------------------- */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -246,9 +186,6 @@ export default function PartnerLedgerPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="space-y-2">
-                <Label htmlFor="partner">Partner</Label>
                 <Select value={selectedPartner} onValueChange={setSelectedPartner}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select partner" />
@@ -289,20 +226,6 @@ export default function PartnerLedgerPage() {
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
-        {ledgerData && (
-          <>
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Partner</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg font-bold">{ledgerData.partner.name}</div>
-                  <p className="text-xs text-muted-foreground capitalize">{ledgerData.partner.type.toLowerCase()}</p>
-                </CardContent>
-              </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -326,56 +249,6 @@ export default function PartnerLedgerPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Credit</CardTitle>
-                  <Calendar className="h-4 w-4 text-green-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-400">{formatCurrency(ledgerData.totalCredit)}</div>
-                  <p className="text-xs text-muted-foreground">Credit transactions</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Partner Ledger Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Ledger Entries</CardTitle>
-                <CardDescription>
-                  {ledgerData.partner.name} - From {new Date(startDate).toLocaleDateString()} to{" "}
-                  {new Date(endDate).toLocaleDateString()}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                      <p className="mt-2 text-muted-foreground">Loading partner ledger...</p>
-                    </div>
-                  </div>
-                ) : (
-                  <DataTable
-                    columns={columns}
-                    data={ledgerData.entries}
-                    searchKey="description"
-                    searchPlaceholder="Search entries..."
-                  />
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Closing Balance */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center p-4 rounded-lg bg-primary/10 border border-primary/20">
-                  <div className="font-semibold text-lg">
-                    Closing Balance: {formatCurrency(ledgerData.closingBalance)}
-                  </div>
-                  <div className="text-sm mt-1 text-muted-foreground">
-                    As of {new Date(endDate).toLocaleDateString()}
-                  </div>
                 </div>
               </CardContent>
             </Card>
