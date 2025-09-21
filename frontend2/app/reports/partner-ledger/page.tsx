@@ -1,6 +1,6 @@
 "use client"
-import React from "react"
-import { useState, useEffect } from "react"
+
+import React, { useState, useEffect } from "react"
 import { DashboardLayout } from "../../../components/layout/dashboard-layout"
 import { Button } from "../../../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card"
@@ -12,6 +12,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Calendar, Download, Printer, Search } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 
+// ------------------- Types -------------------
 interface PartnerLedgerEntry {
   id: string
   date: string
@@ -25,6 +26,7 @@ interface PartnerLedgerEntry {
   status: "PAID" | "UNPAID" | "PARTIAL"
 }
 
+// ------------------- Table Columns -------------------
 const columns: ColumnDef<PartnerLedgerEntry>[] = [
   {
     accessorKey: "date",
@@ -34,18 +36,9 @@ const columns: ColumnDef<PartnerLedgerEntry>[] = [
       return date.toLocaleDateString()
     },
   },
-  {
-    accessorKey: "partnerName",
-    header: "Partner Name",
-  },
-  {
-    accessorKey: "accountNumber",
-    header: "Account No.",
-  },
-  {
-    accessorKey: "invoiceNumber",
-    header: "Invoice/Bill No.",
-  },
+  { accessorKey: "partnerName", header: "Partner Name" },
+  { accessorKey: "accountNumber", header: "Account No." },
+  { accessorKey: "invoiceNumber", header: "Invoice/Bill No." },
   {
     accessorKey: "dueDate",
     header: "Due Date",
@@ -78,18 +71,21 @@ const columns: ColumnDef<PartnerLedgerEntry>[] = [
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
-      const status = row.getValue("status") as string
-      const variant = status === "PAID" ? "default" : status === "PARTIAL" ? "secondary" : "destructive"
+      const status = row.getValue("status") as PartnerLedgerEntry["status"]
+      const variant =
+        status === "PAID" ? "default" : status === "PARTIAL" ? "secondary" : "destructive"
       return <Badge variant={variant}>{status}</Badge>
     },
   },
 ]
 
+// ------------------- Page Component -------------------
 export default function PartnerLedgerPage() {
   const [ledgerEntries, setLedgerEntries] = useState<PartnerLedgerEntry[]>([])
   const [loading, setLoading] = useState(true)
+
   const [startDate, setStartDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0]
   )
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0])
   const [selectedPartner, setSelectedPartner] = useState<string>("all")
@@ -101,11 +97,11 @@ export default function PartnerLedgerPage() {
 
   const loadPartnerLedger = async () => {
     try {
-      // This would be a real API call
+      // Replace with real API call
       // const response = await apiClient.getPartnerLedger({ startDate, endDate, partner: selectedPartner, type: partnerType })
       // setLedgerEntries(response.data || [])
 
-      // Mock data for demo
+      // Mock data
       setLedgerEntries([
         {
           id: "1",
@@ -113,7 +109,7 @@ export default function PartnerLedgerPage() {
           partnerName: "Azure Furniture",
           accountNumber: "2001",
           invoiceNumber: "BILL-2024-001",
-          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          dueDate: new Date(Date.now() + 7 * 86400000).toISOString(),
           amount: 59000,
           balance: 59000,
           type: "BILL",
@@ -125,7 +121,7 @@ export default function PartnerLedgerPage() {
           partnerName: "Nimesh Pathak",
           accountNumber: "1003",
           invoiceNumber: "INV-2024-001",
-          dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+          dueDate: new Date(Date.now() + 2 * 86400000).toISOString(),
           amount: 88500,
           balance: 0,
           type: "INVOICE",
@@ -137,7 +133,7 @@ export default function PartnerLedgerPage() {
           partnerName: "Global Suppliers",
           accountNumber: "2001",
           invoiceNumber: "BILL-2024-002",
-          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          dueDate: new Date(Date.now() + 14 * 86400000).toISOString(),
           amount: 29500,
           balance: 0,
           type: "BILL",
@@ -149,7 +145,7 @@ export default function PartnerLedgerPage() {
           partnerName: "Global Suppliers",
           accountNumber: "1003",
           invoiceNumber: "INV-2024-002",
-          dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+          dueDate: new Date(Date.now() + 2 * 86400000).toISOString(),
           amount: 53100,
           balance: 53100,
           type: "INVOICE",
@@ -163,7 +159,11 @@ export default function PartnerLedgerPage() {
     }
   }
 
-  const totalOutstanding = ledgerEntries.reduce((sum, entry) => sum + (entry.balance > 0 ? entry.balance : 0), 0)
+  // ------------------- Totals -------------------
+  const totalOutstanding = ledgerEntries.reduce(
+    (sum, entry) => sum + (entry.balance > 0 ? entry.balance : 0),
+    0
+  )
   const totalReceivables = ledgerEntries
     .filter((e) => e.type === "INVOICE" && e.balance > 0)
     .reduce((sum, entry) => sum + entry.balance, 0)
@@ -171,14 +171,14 @@ export default function PartnerLedgerPage() {
     .filter((e) => e.type === "BILL" && e.balance > 0)
     .reduce((sum, entry) => sum + entry.balance, 0)
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 0,
     }).format(amount)
-  }
 
+  // ------------------- Render -------------------
   return (
     <DashboardLayout
       title="Partner Ledger"
@@ -196,7 +196,7 @@ export default function PartnerLedgerPage() {
       }
     >
       <div className="space-y-6">
-        {/* Filters */}
+        {/* ------------------- Filters ------------------- */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -208,11 +208,21 @@ export default function PartnerLedgerPage() {
             <div className="grid gap-4 md:grid-cols-5">
               <div className="space-y-2">
                 <Label htmlFor="startDate">Start Date</Label>
-                <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="endDate">End Date</Label>
-                <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Partner Type</Label>
@@ -250,7 +260,7 @@ export default function PartnerLedgerPage() {
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
+        {/* ------------------- Summary Cards ------------------- */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -286,7 +296,7 @@ export default function PartnerLedgerPage() {
           </Card>
         </div>
 
-        {/* Partner Ledger Table */}
+        {/* ------------------- Data Table ------------------- */}
         <Card>
           <CardHeader>
             <CardTitle>Partner Ledger Entries</CardTitle>
