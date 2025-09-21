@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
 import { ScrollArea } from "../ui/scroll-area"
@@ -133,6 +133,7 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, logout } = useAuth()
   const [expandedItems, setExpandedItems] = useState<string[]>(["Master Data"])
 
@@ -201,7 +202,16 @@ export function Sidebar({ className }: SidebarProps) {
             <p className="text-xs text-sidebar-foreground/60 truncate">{user?.role?.replace("_", " ").toLowerCase()}</p>
           </div>
         </div>
-        <Button variant="ghost" className="w-full justify-start text-sidebar-foreground" onClick={logout}>
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-sidebar-foreground" 
+          onClick={() => {
+            console.log("Logging out from sidebar")
+            logout().then(() => {
+              router.replace("/auth/login")
+            })
+          }}
+        >
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </Button>

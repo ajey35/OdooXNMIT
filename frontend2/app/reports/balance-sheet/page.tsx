@@ -111,6 +111,39 @@ export default function BalanceSheetPage() {
     }).format(amount)
   }
 
+  const handlePrint = () => {
+    window.print()
+  }
+
+  const handleExport = () => {
+    if (!balanceSheet) return
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      "Category,Account,Amount\n" +
+      balanceSheet.assets.items.flatMap(item => 
+        item.children ? 
+          item.children.map(child => `Assets,${child.name},${child.amount}`) :
+          [`Assets,${item.name},${item.amount}`]
+      ).concat(
+        balanceSheet.liabilities.items.flatMap(item => 
+          item.children ? 
+            item.children.map(child => `Liabilities,${child.name},${child.amount}`) :
+            [`Liabilities,${item.name},${item.amount}`]
+        )
+      ).concat(
+        balanceSheet.equity.items.map(item => `Equity,${item.name},${item.amount}`)
+      ).join("\n")
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", "balance_sheet.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const renderBalanceSheetSection = (title: string, items: BalanceSheetItem[], total: number) => (
     <div className="space-y-2">
       <h3 className="text-lg font-semibold text-foreground">{title}</h3>
@@ -147,11 +180,11 @@ export default function BalanceSheetPage() {
       title="Balance Sheet"
       headerActions={
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer className="mr-2 h-4 w-4" />
             Print
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={!balanceSheet}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>

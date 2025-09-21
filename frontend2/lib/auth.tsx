@@ -22,7 +22,7 @@ interface AuthContextType {
     loginId: string
     password: string
   }) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   isAuthenticated: boolean
   forgotPassword: (email: string) => Promise<void>
   verifyOtp: (email: string, otp: string) => Promise<void>
@@ -118,12 +118,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    console.log("Logout called")
+    try {
+      // Try to call server logout endpoint if token exists
+      await apiClient.logout()
+    } catch (error) {
+      // Ignore errors if server is not available or token is invalid
+      console.log("Server logout failed, continuing with local logout")
+    }
+    
     apiClient.clearToken()
     if (typeof window !== "undefined") {
       localStorage.removeItem("auth_token")
+      localStorage.clear() // Clear all localStorage items
     }
     setUser(null)
+    console.log("User logged out successfully")
   }
   // ✅ Forgot Password flow
   const forgotPassword = async (email: string) => {

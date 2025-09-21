@@ -8,13 +8,19 @@ import { Badge } from "../../../components/ui/badge"
 import { Plus, Edit, Trash2, CreditCard } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { apiClient } from "../../../lib/api"
+import { CustomerInvoiceForm } from "../../../components/forms/customer-invoice-form"
 
 interface CustomerInvoice {
   id: string
   invoiceNumber: string
   invoiceDate: string
   dueDate: string
-  customerName: string
+  customer: {
+    id: string
+    name: string
+    email: string
+    mobile: string
+  }
   paymentStatus: "PAID" | "UNPAID" | "PARTIAL"
   subtotal: number
   taxAmount: number
@@ -23,7 +29,18 @@ interface CustomerInvoice {
   createdAt: string
 }
 
-const columns: ColumnDef<CustomerInvoice>[] = [
+export default function CustomerInvoicesPage() {
+  const [invoices, setInvoices] = useState<CustomerInvoice[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingInvoice, setEditingInvoice] = useState<CustomerInvoice | null>(null)
+
+  const handleEditInvoice = (invoice: CustomerInvoice) => {
+    setEditingInvoice(invoice)
+    setIsFormOpen(true)
+  }
+
+  const columns: ColumnDef<CustomerInvoice>[] = [
   {
     accessorKey: "invoiceNumber",
     header: "Invoice Number",
@@ -45,8 +62,17 @@ const columns: ColumnDef<CustomerInvoice>[] = [
     },
   },
   {
-    accessorKey: "customerName",
+    accessorKey: "customer",
     header: "Customer",
+    cell: ({ row }) => {
+      const customer = row.getValue("customer") as { name: string; email: string }
+      return (
+        <div>
+          <div className="font-medium">{customer.name}</div>
+          <div className="text-sm text-muted-foreground">{customer.email}</div>
+        </div>
+      )
+    },
   },
   {
     accessorKey: "paymentStatus",
@@ -70,6 +96,7 @@ const columns: ColumnDef<CustomerInvoice>[] = [
     header: "Actions",
     cell: ({ row }) => {
       const status = row.original.paymentStatus
+      
       return (
         <div className="flex items-center space-x-2">
           {status !== "PAID" && (
@@ -77,7 +104,7 @@ const columns: ColumnDef<CustomerInvoice>[] = [
               <CreditCard className="h-4 w-4" />
             </Button>
           )}
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => handleEditInvoice(row.original)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon">
@@ -88,10 +115,6 @@ const columns: ColumnDef<CustomerInvoice>[] = [
     },
   },
 ]
-
-export default function CustomerInvoicesPage() {
-  const [invoices, setInvoices] = useState<CustomerInvoice[]>([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadInvoices()
@@ -110,7 +133,12 @@ export default function CustomerInvoicesPage() {
           invoiceNumber: "INV-2024-001",
           invoiceDate: new Date().toISOString(),
           dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          customerName: "Nimesh Pathak",
+          customer: {
+            id: "1",
+            name: "Nimesh Pathak",
+            email: "nimesh@example.com",
+            mobile: "9876543210"
+          },
           paymentStatus: "PAID",
           subtotal: 75000,
           taxAmount: 13500,
@@ -123,7 +151,12 @@ export default function CustomerInvoicesPage() {
           invoiceNumber: "INV-2024-002",
           invoiceDate: new Date().toISOString(),
           dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          customerName: "Global Suppliers",
+          customer: {
+            id: "2",
+            name: "Global Suppliers",
+            email: "contact@globalsuppliers.com",
+            mobile: "9876543211"
+          },
           paymentStatus: "UNPAID",
           subtotal: 45000,
           taxAmount: 8100,
@@ -137,11 +170,25 @@ export default function CustomerInvoicesPage() {
     }
   }
 
+  const handleNewInvoice = () => {
+    setEditingInvoice(null)
+    setIsFormOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    loadInvoices()
+  }
+
+  const handleFormClose = () => {
+    setIsFormOpen(false)
+    setEditingInvoice(null)
+  }
+
   return (
     <DashboardLayout
       title="Customer Invoices"
       headerActions={
-        <Button>
+        <Button onClick={handleNewInvoice}>
           <Plus className="mr-2 h-4 w-4" />
           New Customer Invoice
         </Button>
@@ -164,6 +211,13 @@ export default function CustomerInvoicesPage() {
           />
         )}
       </div>
+      
+      <CustomerInvoiceForm
+        isOpen={isFormOpen}
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+        invoice={editingInvoice}
+      />
     </DashboardLayout>
   )
 }
