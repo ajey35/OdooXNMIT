@@ -7,7 +7,7 @@ import { Input } from "../../../components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card"
 import { Badge } from "../../../components/ui/badge"
 import { DataTable } from "../../../components/ui/data-table"
-import { Plus, Search, Filter, Download, Printer, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, Filter, Download, Printer } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -56,7 +56,6 @@ export default function PurchasePaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingPayment, setEditingPayment] = useState<BillPayment | null>(null)
   const [vendors, setVendors] = useState<any[]>([])
   const [vendorBills, setVendorBills] = useState<any[]>([])
   const [loadingVendors, setLoadingVendors] = useState(false)
@@ -183,21 +182,12 @@ export default function PurchasePaymentsPage() {
         reference: formData.reference || undefined,
       }
 
-      if (editingPayment) {
-        // Update existing payment
-        await apiClient.updateBillPayment(editingPayment.id, paymentData)
-        toast({
-          title: "Success",
-          description: "Payment updated successfully",
-        })
-      } else {
-        // Create new payment
-        await apiClient.createBillPayment(paymentData)
-        toast({
-          title: "Success",
-          description: "Payment created successfully",
-        })
-      }
+      // Create new payment
+      await apiClient.createBillPayment(paymentData)
+      toast({
+        title: "Success",
+        description: "Payment created successfully",
+      })
 
       handleReset()
       setIsDialogOpen(false)
@@ -213,39 +203,6 @@ export default function PurchasePaymentsPage() {
     }
   }
 
-  const handleEdit = (payment: BillPayment) => {
-    setEditingPayment(payment)
-    setFormData({
-      vendorId: payment.vendor.id,
-      vendorBillId: payment.vendorBill.id,
-      paymentDate: payment.paymentDate.split("T")[0],
-      paymentMethod: payment.paymentMethod,
-      amount: payment.amount.toString(),
-      reference: payment.reference || "",
-    })
-    setIsDialogOpen(true)
-  }
-
-  const handleDelete = async (paymentId: string) => {
-    if (!confirm("Are you sure you want to delete this payment?")) return
-
-    try {
-      await apiClient.deleteBillPayment(paymentId)
-      toast({
-        title: "Success",
-        description: "Payment deleted successfully",
-      })
-      loadPayments()
-      loadStats()
-    } catch (error) {
-      console.error("Failed to delete payment:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete payment",
-        variant: "destructive",
-      })
-    }
-  }
 
   const handleReset = () => {
     setFormData({
@@ -256,7 +213,6 @@ export default function PurchasePaymentsPage() {
       amount: "",
       reference: "",
     })
-    setEditingPayment(null)
     setVendorBills([])
   }
 
@@ -352,31 +308,6 @@ export default function PurchasePaymentsPage() {
         <div className="text-sm text-muted-foreground">{row.getValue("reference") || "-"}</div>
       ),
     },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }: any) => {
-        const payment = row.original as BillPayment
-        return (
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEdit(payment)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDelete(payment.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        )
-      },
-    },
   ]
 
   const filteredPayments = payments.filter(
@@ -411,12 +342,8 @@ export default function PurchasePaymentsPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
-                <DialogTitle>
-                  {editingPayment ? "Edit Payment" : "Create New Payment"}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingPayment ? "Update payment details" : "Record a new payment to vendor"}
-                </DialogDescription>
+                <DialogTitle>Create New Payment</DialogTitle>
+                <DialogDescription>Record a new payment to vendor</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -522,7 +449,7 @@ export default function PurchasePaymentsPage() {
                     Cancel
                   </Button>
                   <Button type="submit">
-                    {editingPayment ? "Update Payment" : "Create Payment"}
+                    Create Payment
                   </Button>
                 </div>
               </form>

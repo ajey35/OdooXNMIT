@@ -428,7 +428,7 @@ export function CustomerInvoiceForm({ isOpen, onClose, onSuccess, invoice }: Cus
                     />
                   </div>
                   <div className="flex items-center">
-                    <span className="text-sm font-medium">₹{item.total.toFixed(2)}</span>
+                    <span className="text-sm font-medium">₹{parseFloat(item.total.toString()).toFixed(2)}</span>
                     {items.length > 1 && (
                       <Button
                         type="button"
@@ -460,23 +460,23 @@ export function CustomerInvoiceForm({ isOpen, onClose, onSuccess, invoice }: Cus
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>₹{subtotal.toFixed(2)}</span>
+              <span>₹{parseFloat(subtotal.toString()).toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Tax (18%):</span>
-              <span>₹{taxAmount.toFixed(2)}</span>
+              <span>₹{parseFloat(taxAmount.toString()).toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-bold text-lg border-t pt-2">
               <span>Total:</span>
-              <span>₹{total.toFixed(2)}</span>
+              <span>₹{parseFloat(total.toString()).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm text-gray-600">
               <span>Paid Amount:</span>
-              <span>₹{formData.paidAmount.toFixed(2)}</span>
+              <span>₹{parseFloat(formData.paidAmount.toString()).toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-medium text-red-600 border-t pt-1">
               <span>Outstanding:</span>
-              <span>₹{(total - formData.paidAmount).toFixed(2)}</span>
+              <span>₹{(parseFloat(total.toString()) - parseFloat(formData.paidAmount.toString())).toFixed(2)}</span>
             </div>
           </div>
 

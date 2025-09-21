@@ -13,7 +13,8 @@ interface ApiResponse<T = any> {
 }
 
 class ApiClient {
-  get(arg0: string, arg1: { params: { asOfDate: string } }) {
+  get: any
+  getMonthlyTrends(): any {
     throw new Error("Method not implemented.")
   }
   private baseURL: string
@@ -474,18 +475,6 @@ class ApiClient {
     })
   }
 
-  async updateBillPayment(id: string, paymentData: any) {
-    return this.request<any>(`/payments/bill-payments/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(paymentData),
-    })
-  }
-
-  async deleteBillPayment(id: string) {
-    return this.request<any>(`/payments/bill-payments/${id}`, {
-      method: "DELETE",
-    })
-  }
 
   async getInvoicePayments(params?: {
     page?: number

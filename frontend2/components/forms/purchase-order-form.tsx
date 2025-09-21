@@ -14,7 +14,28 @@ interface PurchaseOrderFormProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  order?: any
+  order?: {
+    id: string
+    poNumber: string
+    poDate: string
+    vendorId: string
+    vendorRef: string
+    status: string
+    items?: Array<{
+      id: string
+      productId: string
+      quantity: number
+      unitPrice: number
+      taxAmount: number
+      total: number
+      taxId?: string | null
+      product?: {
+        id: string
+        name: string
+        type: string
+      }
+    }>
+  } | null
 }
 
 interface Contact {
@@ -26,6 +47,12 @@ interface Contact {
 interface Product {
   id: string
   name: string
+  type: "GOODS" | "SERVICE"
+  salesPrice: number
+  purchasePrice?: number
+  hsnCode?: string
+  category?: string
+  taxPercentage?: number
 }
 
 interface OrderItem {
@@ -34,6 +61,8 @@ interface OrderItem {
   description: string
   quantity: number
   unitPrice: number
+  taxPercentage: number
+  taxAmount: number
   total: number
   taxId?: string | null
 }
@@ -46,6 +75,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
     vendorRef: order?.vendorRef || "",
     notes: "",
   })
+  const [isGeneratingNumber, setIsGeneratingNumber] = useState(false)
   const [items, setItems] = useState<OrderItem[]>([])
   const [vendors, setVendors] = useState<Contact[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -57,17 +87,29 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
       loadVendors()
       loadProducts()
       if (order) {
+        // Load existing form data for editing
+        setFormData({
+          poNumber: order.poNumber || "",
+          poDate: order.poDate ? new Date(order.poDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          vendorId: order.vendorId || "",
+          vendorRef: order.vendorRef || "",
+          notes: "",
+        })
         // Load existing items if editing
-        setItems(order.items.map((item: any) => ({
-          id: item.id,
-          productId: item.productId,
-          description: item.description || "",
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          total: item.quantity * item.unitPrice,
+        setItems(order.items?.map((item: any) => ({
+          id: item.id || Date.now().toString(),
+          productId: item.productId || "",
+          description: item.product?.name || "",
+          quantity: parseFloat(item.quantity?.toString() || "1"),
+          unitPrice: parseFloat(item.unitPrice?.toString() || "0"),
+          taxPercentage: 18, // Default tax percentage
+          taxAmount: parseFloat(item.taxAmount?.toString() || "0"),
+          total: parseFloat(item.total?.toString() || "0"),
           taxId: item.taxId || null,
-        })))
+        })) || [])
       } else {
+        // Generate PO number for new order
+        generatePONumber()
         // Add one empty item for new order
         setItems([{
           id: Date.now().toString(),
@@ -75,6 +117,8 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
           description: "",
           quantity: 1,
           unitPrice: 0,
+          taxPercentage: 18,
+          taxAmount: 0,
           total: 0,
           taxId: null,
         }])
@@ -102,9 +146,54 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
     } catch (error) {
       console.error("Failed to load products:", error)
       setProducts([
-        { id: "101", name: "Chair" },
-        { id: "102", name: "Table" },
+        { id: "101", name: "Office Chair", type: "GOODS", salesPrice: 8000, purchasePrice: 6000, hsnCode: "9401", category: "Furniture", taxPercentage: 18 },
+        { id: "102", name: "Conference Table", type: "GOODS", salesPrice: 25000, purchasePrice: 18000, hsnCode: "9403", category: "Furniture", taxPercentage: 18 },
+        { id: "103", name: "Laptop Stand", type: "GOODS", salesPrice: 3000, purchasePrice: 2000, hsnCode: "8471", category: "Electronics", taxPercentage: 18 },
+        { id: "104", name: "Cleaning Service", type: "SERVICE", salesPrice: 1500, purchasePrice: 1000, category: "Services", taxPercentage: 18 },
       ])
+    }
+  }
+
+  const generatePONumber = async () => {
+    setIsGeneratingNumber(true)
+    try {
+      // Get current year
+      const currentYear = new Date().getFullYear()
+      
+      // Try to get the latest PO number from existing purchase orders
+      const response = await apiClient.getPurchaseOrders({ limit: 1 })
+      const existingOrders = response.data || []
+      
+      let nextNumber = 1
+      
+      if (existingOrders.length > 0) {
+        // Extract number from the latest PO number
+        const latestPONumber = existingOrders[0].poNumber || ""
+        const yearPrefix = `PO${currentYear}`
+        
+        if (latestPONumber.startsWith(yearPrefix)) {
+          // Extract the number part after the year
+          const numberPart = latestPONumber.substring(yearPrefix.length)
+          const lastNumber = parseInt(numberPart, 10)
+          if (!isNaN(lastNumber)) {
+            nextNumber = lastNumber + 1
+          }
+        }
+      }
+      
+      // Generate new PO number: PO2025001, PO2025002, etc.
+      const newPONumber = `PO${currentYear}${nextNumber.toString().padStart(3, '0')}`
+      
+      setFormData(prev => ({ ...prev, poNumber: newPONumber }))
+    } catch (error) {
+      console.error("Failed to generate PO number:", error)
+      // Fallback to timestamp-based number
+      const timestamp = Date.now().toString().slice(-6)
+      const currentYear = new Date().getFullYear()
+      const fallbackNumber = `PO${currentYear}${timestamp}`
+      setFormData(prev => ({ ...prev, poNumber: fallbackNumber }))
+    } finally {
+      setIsGeneratingNumber(false)
     }
   }
 
@@ -115,6 +204,8 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
       description: "",
       quantity: 1,
       unitPrice: 0,
+      taxPercentage: 18,
+      taxAmount: 0,
       total: 0,
       taxId: null,
     }
@@ -129,8 +220,25 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
     setItems(items.map(item => {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value }
-        if (field === "quantity" || field === "unitPrice") {
-          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice
+        
+        // If product is selected, update product details and price
+        if (field === 'productId') {
+          const selectedProduct = products.find(p => p.id === value)
+          if (selectedProduct) {
+            updatedItem.unitPrice = selectedProduct.purchasePrice || selectedProduct.salesPrice
+            updatedItem.taxPercentage = selectedProduct.taxPercentage || 18
+            // Auto-fill description with product name if empty
+            if (!updatedItem.description) {
+              updatedItem.description = selectedProduct.name
+            }
+          }
+        }
+        
+        // Calculate tax and total when quantity, unit price, tax percentage, or product changes
+        if (field === "quantity" || field === "unitPrice" || field === 'taxPercentage' || field === 'productId') {
+          const subtotal = parseFloat(updatedItem.quantity.toString()) * parseFloat(updatedItem.unitPrice.toString())
+          updatedItem.taxAmount = (subtotal * parseFloat(updatedItem.taxPercentage.toString())) / 100
+          updatedItem.total = subtotal + updatedItem.taxAmount
         }
         return updatedItem
       }
@@ -139,8 +247,8 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
   }
 
   const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0)
-    const taxAmount = subtotal * 0.18
+    const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.quantity.toString()) * parseFloat(item.unitPrice.toString())), 0)
+    const taxAmount = items.reduce((sum, item) => sum + parseFloat(item.taxAmount.toString()), 0)
     const total = subtotal + taxAmount
     return { subtotal, taxAmount, total }
   }
@@ -150,18 +258,28 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
     setLoading(true)
 
     try {
-      const { subtotal, taxAmount, total } = calculateTotals()
+      // Validate required fields
+      if (!formData.vendorId) {
+        toast({ title: "Error", description: "Please select a vendor", variant: "destructive" })
+        return
+      }
+
+      if (items.length === 0 || items.some(item => !item.productId)) {
+        toast({ title: "Error", description: "Please add at least one item with a product", variant: "destructive" })
+        return
+      }
+
       const orderItems = items.map(item => ({
         productId: item.productId,
-        quantity: item.quantity.toFixed(2),
-        unitPrice: item.unitPrice.toFixed(2),
+        quantity: parseFloat(item.quantity.toString()),
+        unitPrice: parseFloat(item.unitPrice.toString()),
         taxId: item.taxId || null,
       }))
 
       const orderData = {
         vendorId: formData.vendorId,
         poDate: new Date(formData.poDate).toISOString(),
-        vendorRef: formData.vendorRef,
+        vendorRef: formData.vendorRef || null,
         items: orderItems,
       }
 
@@ -175,28 +293,44 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
 
       onSuccess()
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast({ title: "Error", description: "Failed to save purchase order", variant: "destructive" })
+      const errorMessage = error?.response?.data?.message || "Failed to save purchase order"
+      toast({ title: "Error", description: errorMessage, variant: "destructive" })
     } finally {
       setLoading(false)
     }
   }
 
   const handleReset = () => {
-    setFormData({
-      poNumber: order?.poNumber || "",
-      poDate: order?.poDate ? new Date(order.poDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
-      vendorId: order?.vendorId || "",
-      vendorRef: order?.vendorRef || "",
-      notes: "",
-    })
+    if (order) {
+      // Reset to original values for editing
+      setFormData({
+        poNumber: order?.poNumber || "",
+        poDate: order?.poDate ? new Date(order.poDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+        vendorId: order?.vendorId || "",
+        vendorRef: order?.vendorRef || "",
+        notes: "",
+      })
+    } else {
+      // Reset and generate new PO number for new order
+      setFormData({
+        poNumber: "",
+        poDate: new Date().toISOString().split("T")[0],
+        vendorId: "",
+        vendorRef: "",
+        notes: "",
+      })
+      generatePONumber()
+    }
     setItems([{
       id: Date.now().toString(),
       productId: "",
       description: "",
       quantity: 1,
       unitPrice: 0,
+      taxPercentage: 18,
+      taxAmount: 0,
       total: 0,
       taxId: null,
     }])
@@ -218,13 +352,27 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="poNumber">PO Number</Label>
-              <Input
-                id="poNumber"
-                value={formData.poNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, poNumber: e.target.value }))}
-                placeholder="e.g., PO-2025-001"
-                required
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="poNumber"
+                  value={formData.poNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, poNumber: e.target.value }))}
+                  placeholder={isGeneratingNumber ? "Generating..." : "e.g., PO2025001"}
+                  required
+                  className="flex-1"
+                />
+                {!order && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generatePONumber}
+                    disabled={isGeneratingNumber}
+                  >
+                    {isGeneratingNumber ? "Generating..." : "Generate"}
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="poDate">PO Date</Label>
@@ -273,7 +421,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
             </div>
             <div className="space-y-2">
               {items.map(item => (
-                <div key={item.id} className="grid grid-cols-6 gap-2 items-end">
+                <div key={item.id} className="grid grid-cols-7 gap-2 items-end">
                   <div className="col-span-2">
                     <Label>Product</Label>
                     <Select
@@ -283,7 +431,16 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
                     >
                       <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                       <SelectContent>
-                        {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        {products.map(p => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{p.name}</span>
+                              <span className="text-sm text-gray-500">
+                                {p.type} • {p.category || 'No Category'}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -301,23 +458,56 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
                       min="0"
                       step="0.01"
                       value={item.quantity}
-                      onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value))}
+                      onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
                       required
                     />
                   </div>
                   <div>
                     <Label>Unit Price</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value))}
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unitPrice}
+                        onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                        className={item.productId ? "bg-green-50 border-green-200" : ""}
+                        placeholder="0.00"
+                        required
+                      />
+                      {item.productId && (
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                          <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                            Auto
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Tax %</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={item.taxPercentage}
+                        onChange={(e) => updateItem(item.id, 'taxPercentage', parseFloat(e.target.value) || 0)}
+                        className={item.productId ? "bg-purple-50 border-purple-200" : ""}
+                        placeholder="18"
+                      />
+                      {item.productId && (
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                          <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                            Auto
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center">
-                    <span className="text-sm font-medium">₹{item.total.toFixed(2)}</span>
+                    <span className="text-sm font-medium">₹{parseFloat(item.total.toString()).toFixed(2)}</span>
                     {items.length > 1 && (
                       <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(item.id)} className="ml-2">
                         <Trash2 className="h-4 w-4" />
@@ -331,9 +521,9 @@ export function PurchaseOrderForm({ isOpen, onClose, onSuccess, order }: Purchas
 
           {/* Totals */}
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-            <div className="flex justify-between"><span>Subtotal:</span><span>₹{subtotal.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>Tax (18%):</span><span>₹{taxAmount.toFixed(2)}</span></div>
-            <div className="flex justify-between font-bold text-lg border-t pt-2"><span>Total:</span><span>₹{total.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Subtotal:</span><span>₹{parseFloat(subtotal.toString()).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Tax (18%):</span><span>₹{parseFloat(taxAmount.toString()).toFixed(2)}</span></div>
+            <div className="flex justify-between font-bold text-lg border-t pt-2"><span>Total:</span><span>₹{parseFloat(total.toString()).toFixed(2)}</span></div>
           </div>
 
           <DialogFooter>

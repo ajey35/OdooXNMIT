@@ -10,9 +10,12 @@ import { Calendar, Download, Printer } from "lucide-react"
 import { apiClient } from "../../../lib/api"
 
 interface BalanceSheetItem {
+  id: string
   name: string
-  amount: number
-  children?: BalanceSheetItem[]
+  code: string
+  type: string
+  balance: number
+  isDebit: boolean
 }
 
 interface BalanceSheetData {
@@ -48,9 +51,7 @@ export default function BalanceSheetPage() {
     setError(null)
     try {
       // ✅ API call to backend
-      const response = await apiClient.get(`/reports/balance-sheet`, {
-        params: { asOfDate },
-      })
+      const response = await apiClient.getBalanceSheet(asOfDate)
       setBalanceSheet(response.data)
     } catch (err: any) {
       console.error("Failed to load balance sheet:", err)
@@ -78,18 +79,10 @@ export default function BalanceSheetPage() {
     const csvContent =
       "data:text/csv;charset=utf-8," +
       "Category,Account,Amount\n" +
-      balanceSheet.assets.items.flatMap(item => 
-        item.children ? 
-          item.children.map(child => `Assets,${child.name},${child.amount}`) :
-          [`Assets,${item.name},${item.amount}`]
+      balanceSheet.assets.items.map(item => `Assets,${item.name},${item.balance}`).concat(
+        balanceSheet.liabilities.items.map(item => `Liabilities,${item.name},${item.balance}`)
       ).concat(
-        balanceSheet.liabilities.items.flatMap(item => 
-          item.children ? 
-            item.children.map(child => `Liabilities,${child.name},${child.amount}`) :
-            [`Liabilities,${item.name},${item.amount}`]
-        )
-      ).concat(
-        balanceSheet.equity.items.map(item => `Equity,${item.name},${item.amount}`)
+        balanceSheet.equity.items.map(item => `Equity,${item.name},${item.balance}`)
       ).join("\n")
 
     const encodedUri = encodeURI(csvContent)
@@ -104,24 +97,13 @@ export default function BalanceSheetPage() {
   const renderBalanceSheetSection = (title: string, items: BalanceSheetItem[], total: number) => (
     <div className="space-y-2">
       <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-      {items.map((item, index) => (
-        <div key={index} className="space-y-1">
-          {item.children ? (
-            <>
-              <div className="font-medium text-muted-foreground">{item.name}</div>
-              {item.children.map((child, childIndex) => (
-                <div key={childIndex} className="flex justify-between items-center pl-4">
-                  <span className="text-sm">{child.name}</span>
-                  <span className="text-sm font-mono">{formatCurrency(child.amount)}</span>
-                </div>
-              ))}
-            </>
-          ) : (
-            <div className="flex justify-between items-center">
-              <span>{item.name}</span>
-              <span className="font-mono">{formatCurrency(item.amount)}</span>
-            </div>
-          )}
+      {items.map((item) => (
+        <div key={item.id} className="flex justify-between items-center">
+          <div>
+            <span className="text-sm font-medium">{item.name}</span>
+            <span className="text-xs text-muted-foreground ml-2">({item.code})</span>
+          </div>
+          <span className="font-mono">{formatCurrency(item.balance)}</span>
         </div>
       ))}
       <Separator />

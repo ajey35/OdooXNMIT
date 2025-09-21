@@ -11,14 +11,17 @@ import { Calendar, Download, Printer, TrendingUp, TrendingDown } from "lucide-re
 import { apiClient } from "../../../lib/api"
 
 interface ProfitLossItem {
+  id: string
   name: string
+  code: string
   amount: number
-  children?: ProfitLossItem[]
 }
 
 interface ProfitLossData {
-  startDate: string
-  endDate: string
+  period: {
+    startDate: string
+    endDate: string
+  }
   income: {
     items: ProfitLossItem[]
     total: number
@@ -27,8 +30,8 @@ interface ProfitLossData {
     items: ProfitLossItem[]
     total: number
   }
-  grossProfit: number
   netProfit: number
+  isProfit: boolean
 }
 
 export default function ProfitLossPage() {
@@ -44,43 +47,13 @@ export default function ProfitLossPage() {
   }, [])
 
   const loadProfitLoss = async () => {
+    setLoading(true)
     try {
       const response = await apiClient.getProfitLoss(startDate, endDate)
       setProfitLoss(response.data)
     } catch (error) {
       console.error("Failed to load profit & loss:", error)
-      // Mock data for demo
-      setProfitLoss({
-        startDate: startDate,
-        endDate: endDate,
-        income: {
-          items: [
-            { name: "Sales Revenue", amount: 850000 },
-            { name: "Service Income", amount: 150000 },
-            { name: "Other Income", amount: 25000 },
-          ],
-          total: 1025000,
-        },
-        expenses: {
-          items: [
-            { name: "Cost of Goods Sold", amount: 450000 },
-            {
-              name: "Operating Expenses",
-              amount: 0,
-              children: [
-                { name: "Rent Expense", amount: 50000 },
-                { name: "Salary Expense", amount: 200000 },
-                { name: "Utilities", amount: 25000 },
-                { name: "Marketing", amount: 35000 },
-              ],
-            },
-            { name: "Other Expenses", amount: 15000 },
-          ],
-          total: 775000,
-        },
-        grossProfit: 575000,
-        netProfit: 250000,
-      })
+      setProfitLoss(null)
     } finally {
       setLoading(false)
     }
@@ -104,16 +77,8 @@ export default function ProfitLossPage() {
     const csvContent =
       "data:text/csv;charset=utf-8," +
       "Category,Item,Amount\n" +
-      profitLoss.income.items.flatMap(item => 
-        item.children ? 
-          item.children.map(child => `Income,${child.name},${child.amount}`) :
-          [`Income,${item.name},${item.amount}`]
-      ).concat(
-        profitLoss.expenses.items.flatMap(item => 
-          item.children ? 
-            item.children.map(child => `Expenses,${child.name},${child.amount}`) :
-            [`Expenses,${item.name},${item.amount}`]
-        )
+      profitLoss.income.items.map(item => `Income,${item.name},${item.amount}`).concat(
+        profitLoss.expenses.items.map(item => `Expenses,${item.name},${item.amount}`)
       ).concat([
         `Income,Total Income,${profitLoss.income.total}`,
         `Expenses,Total Expenses,${profitLoss.expenses.total}`,
@@ -132,24 +97,13 @@ export default function ProfitLossPage() {
   const renderProfitLossSection = (title: string, items: ProfitLossItem[], total: number, isExpense = false) => (
     <div className="space-y-2">
       <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-      {items.map((item, index) => (
-        <div key={index} className="space-y-1">
-          {item.children ? (
-            <>
-              <div className="font-medium text-muted-foreground">{item.name}</div>
-              {item.children.map((child, childIndex) => (
-                <div key={childIndex} className="flex justify-between items-center pl-4">
-                  <span className="text-sm">{child.name}</span>
-                  <span className="text-sm font-mono">{formatCurrency(child.amount)}</span>
-                </div>
-              ))}
-            </>
-          ) : (
-            <div className="flex justify-between items-center">
-              <span>{item.name}</span>
-              <span className="font-mono">{formatCurrency(item.amount)}</span>
-            </div>
-          )}
+      {items.map((item) => (
+        <div key={item.id} className="flex justify-between items-center">
+          <div>
+            <span className="text-sm font-medium">{item.name}</span>
+            <span className="text-xs text-muted-foreground ml-2">({item.code})</span>
+          </div>
+          <span className="font-mono">{formatCurrency(item.amount)}</span>
         </div>
       ))}
       <Separator />
@@ -251,11 +205,11 @@ export default function ProfitLossPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-                  <TrendingUp className={`h-4 w-4 ${profitLoss.netProfit >= 0 ? "text-green-400" : "text-red-400"}`} />
+                  <TrendingUp className={`h-4 w-4 ${profitLoss.isProfit ? "text-green-400" : "text-red-400"}`} />
                 </CardHeader>
                 <CardContent>
                   <div
-                    className={`text-2xl font-bold ${profitLoss.netProfit >= 0 ? "text-green-400" : "text-red-400"}`}
+                    className={`text-2xl font-bold ${profitLoss.isProfit ? "text-green-400" : "text-red-400"}`}
                   >
                     {formatCurrency(profitLoss.netProfit)}
                   </div>
@@ -273,8 +227,8 @@ export default function ProfitLossPage() {
                 <CardHeader>
                   <CardTitle className="text-green-400">Income</CardTitle>
                   <CardDescription>
-                    {new Date(profitLoss.startDate).toLocaleDateString()} -{" "}
-                    {new Date(profitLoss.endDate).toLocaleDateString()}
+                    {new Date(profitLoss.period.startDate).toLocaleDateString()} -{" "}
+                    {new Date(profitLoss.period.endDate).toLocaleDateString()}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -287,8 +241,8 @@ export default function ProfitLossPage() {
                 <CardHeader>
                   <CardTitle className="text-red-400">Expenses</CardTitle>
                   <CardDescription>
-                    {new Date(profitLoss.startDate).toLocaleDateString()} -{" "}
-                    {new Date(profitLoss.endDate).toLocaleDateString()}
+                    {new Date(profitLoss.period.startDate).toLocaleDateString()} -{" "}
+                    {new Date(profitLoss.period.endDate).toLocaleDateString()}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -312,10 +266,10 @@ export default function ProfitLossPage() {
                   <Separator />
                   <div
                     className={`flex justify-between items-center text-xl font-bold ${
-                      profitLoss.netProfit >= 0 ? "text-green-400" : "text-red-400"
+                      profitLoss.isProfit ? "text-green-400" : "text-red-400"
                     }`}
                   >
-                    <span>Net {profitLoss.netProfit >= 0 ? "Profit" : "Loss"}</span>
+                    <span>Net {profitLoss.isProfit ? "Profit" : "Loss"}</span>
                     <span className="font-mono">{formatCurrency(profitLoss.netProfit)}</span>
                   </div>
                 </div>

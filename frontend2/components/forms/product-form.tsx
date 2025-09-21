@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
@@ -37,6 +37,9 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
   const [error, setError] = useState("")
   const [hsnSuggestions, setHsnSuggestions] = useState<HSNItem[]>([])
   const [searchingHSN, setSearchingHSN] = useState(false)
+  const [showHsnSuggestions, setShowHsnSuggestions] = useState(false)
+  const [selectedHsnIndex, setSelectedHsnIndex] = useState(-1)
+  const hsnContainerRef = useRef<HTMLDivElement>(null)
 
   // Fetch HSN suggestions from GST API
   const fetchHSNSuggestions = async (query: string) => {
@@ -53,9 +56,12 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
 
       const data = await response.json()
       setHsnSuggestions(data.data || [])
+      setShowHsnSuggestions(true)
+      setSelectedHsnIndex(-1)
     } catch (err) {
       console.error(err)
       setHsnSuggestions([])
+      setShowHsnSuggestions(false)
     } finally {
       setSearchingHSN(false)
     }
@@ -68,10 +74,75 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
         fetchHSNSuggestions(formData.hsnCode)
       } else {
         setHsnSuggestions([])
+        setShowHsnSuggestions(false)
       }
     }, 500)
     return () => clearTimeout(timer)
   }, [formData.hsnCode, formData.type])
+
+  // Handle HSN selection
+  const handleHsnSelect = (hsnCode: string) => {
+    setFormData((prev) => ({ ...prev, hsnCode }))
+    setShowHsnSuggestions(false)
+    setHsnSuggestions([])
+    setSelectedHsnIndex(-1)
+  }
+
+  // Handle keyboard navigation
+  const handleHsnKeyDown = (e: React.KeyboardEvent) => {
+    if (!showHsnSuggestions || hsnSuggestions.length === 0) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSelectedHsnIndex(prev => 
+          prev < hsnSuggestions.length - 1 ? prev + 1 : prev
+        )
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSelectedHsnIndex(prev => prev > 0 ? prev - 1 : -1)
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (selectedHsnIndex >= 0 && selectedHsnIndex < hsnSuggestions.length) {
+          handleHsnSelect(hsnSuggestions[selectedHsnIndex].c)
+        }
+        break
+      case 'Escape':
+        setShowHsnSuggestions(false)
+        setSelectedHsnIndex(-1)
+        break
+    }
+  }
+
+  // Handle input focus/blur
+  const handleHsnFocus = () => {
+    if (hsnSuggestions.length > 0) {
+      setShowHsnSuggestions(true)
+    }
+  }
+
+  const handleHsnBlur = () => {
+    // Delay hiding to allow click on suggestions
+    setTimeout(() => {
+      setShowHsnSuggestions(false)
+    }, 200)
+  }
+
+  // Handle click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (hsnContainerRef.current && !hsnContainerRef.current.contains(event.target as Node)) {
+        setShowHsnSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,6 +176,10 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
         salesTaxPercent: "",
         purchaseTaxPercent: "",
       })
+      // Clear HSN suggestions
+      setHsnSuggestions([])
+      setShowHsnSuggestions(false)
+      setSelectedHsnIndex(-1)
     } catch (err: any) {
       setError(err.message || "Failed to save product")
     } finally {
@@ -178,27 +253,46 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
               />
             </div>
 
-            <div className="space-y-2 relative">
+            <div className="space-y-2 relative" ref={hsnContainerRef}>
               <Label htmlFor="hsnCode">HSN / SAC Code</Label>
-              <Input
-                id="hsnCode"
-                value={formData.hsnCode}
-                onChange={(e) => handleChange("hsnCode", e.target.value)}
-                placeholder="Enter HSN code or description"
-                disabled={loading}
-              />
-              {searchingHSN && <Loader2 className="animate-spin h-4 w-4 mt-1 absolute right-2 top-8" />}
-              {hsnSuggestions.length > 0 && (
-                <div className="border rounded p-2 mt-1 max-h-40 overflow-y-auto bg-white absolute z-50 w-full">
-                  {hsnSuggestions.map((item) => (
+              <div className="relative">
+                <Input
+                  id="hsnCode"
+                  value={formData.hsnCode}
+                  onChange={(e) => handleChange("hsnCode", e.target.value)}
+                  onFocus={handleHsnFocus}
+                  onBlur={handleHsnBlur}
+                  onKeyDown={handleHsnKeyDown}
+                  placeholder="Enter HSN code or description"
+                  disabled={loading}
+                  className="pr-8"
+                />
+                {searchingHSN && (
+                  <Loader2 className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+              {showHsnSuggestions && hsnSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {hsnSuggestions.map((item, index) => (
                     <div
                       key={item.c}
-                      className="p-1 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => handleChange("hsnCode", item.c)}
+                      className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
+                        index === selectedHsnIndex 
+                          ? 'bg-blue-50 border-blue-200' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => handleHsnSelect(item.c)}
+                      onMouseEnter={() => setSelectedHsnIndex(index)}
                     >
-                      {item.c} - {item.n}
+                      <div className="font-medium text-sm text-gray-900">{item.c}</div>
+                      <div className="text-xs text-gray-600 truncate">{item.n}</div>
                     </div>
                   ))}
+                </div>
+              )}
+              {showHsnSuggestions && hsnSuggestions.length === 0 && !searchingHSN && formData.hsnCode.length >= 2 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-center text-sm text-gray-500">
+                  No HSN codes found
                 </div>
               )}
             </div>

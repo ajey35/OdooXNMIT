@@ -205,12 +205,14 @@ router.post('/', authenticate,
 // @desc    Update account
 // @route   PUT /api/chart-of-accounts/:id
 // @access  Private
-router.put('/:id', authenticate, validate([
-  body('name').optional().trim().notEmpty().withMessage('Account name cannot be empty'),
-  body('type').optional().isIn(['ASSET', 'LIABILITY', 'EXPENSE', 'INCOME', 'EQUITY']).withMessage('Invalid account type'),
-  body('code').optional().isString().withMessage('Code must be a string'),
-  body('parentId').optional().isString().withMessage('Parent ID must be a string'),
-]), async (req: Request, res: Response) => {
+router.put('/:id', authenticate,
+//    validate([
+//   body('name').optional().trim().notEmpty().withMessage('Account name cannot be empty'),
+//   body('type').optional().isIn(['ASSET', 'LIABILITY', 'EXPENSE', 'INCOME', 'EQUITY']).withMessage('Invalid account type'),
+//   body('code').optional().isString().withMessage('Code must be a string'),
+//   body('parentId').optional().isString().withMessage('Parent ID must be a string'),
+// ]),
+ async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;

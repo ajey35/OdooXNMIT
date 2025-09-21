@@ -60,8 +60,8 @@ export default function StockStatementPage() {
   }, [selectedProduct])
 
   const loadStockStatement = async () => {
+    setLoading(true)
     try {
-      setLoading(true)
       const response = await apiClient.getStockStatement(selectedProduct || undefined)
       setStockData(response.data)
     } catch (error) {
@@ -71,81 +71,7 @@ export default function StockStatementPage() {
         description: "Failed to load stock statement",
         variant: "destructive",
       })
-      // Set mock data for demo
-      setStockData({
-        asOfDate: new Date().toISOString(),
-        items: [
-          {
-            product: {
-              id: "PRD-001",
-              name: "Oak Dining Table",
-              category: "Tables",
-              type: "GOODS",
-              purchasePrice: 450,
-            },
-            openingStock: 10,
-            purchases: 20,
-            sales: 15,
-            adjustments: 0,
-            closingStock: 15,
-            stockValue: 6750,
-            movements: [],
-          },
-          {
-            product: {
-              id: "PRD-002",
-              name: "Leather Sofa Set",
-              category: "Seating",
-              type: "GOODS",
-              purchasePrice: 1200,
-            },
-            openingStock: 5,
-            purchases: 10,
-            sales: 12,
-            adjustments: 0,
-            closingStock: 3,
-            stockValue: 3600,
-            movements: [],
-          },
-          {
-            product: {
-              id: "PRD-003",
-              name: "Wooden Bookshelf",
-              category: "Storage",
-              type: "GOODS",
-              purchasePrice: 280,
-            },
-            openingStock: 20,
-            purchases: 30,
-            sales: 25,
-            adjustments: 0,
-            closingStock: 25,
-            stockValue: 7000,
-            movements: [],
-          },
-          {
-            product: {
-              id: "PRD-004",
-              name: "Office Chair",
-              category: "Seating",
-              type: "GOODS",
-              purchasePrice: 150,
-            },
-            openingStock: 8,
-            purchases: 15,
-            sales: 23,
-            adjustments: 0,
-            closingStock: 0,
-            stockValue: 0,
-            movements: [],
-          },
-        ],
-        summary: {
-          totalProducts: 4,
-          totalStockValue: 17350,
-          totalQuantity: 43,
-        },
-      })
+      setStockData(null)
     } finally {
       setLoading(false)
     }

@@ -30,6 +30,7 @@ interface SalesOrderFormProps {
     subtotal: number
     taxAmount: number
     total: number
+    items?: any[]
   } | null
 }
 
@@ -46,6 +47,7 @@ interface Product {
   salesPrice: number
   hsnCode?: string
   category?: string
+  taxPercentage?: number
 }
 
 interface OrderItem {
@@ -55,6 +57,8 @@ interface OrderItem {
   description: string
   quantity: number
   unitPrice: number
+  taxPercentage: number
+  taxAmount: number
   total: number
 }
 
@@ -80,8 +84,27 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
       loadCustomers()
       loadProducts()
       if (order) {
+        // Load existing form data for editing
+        setFormData({
+          soNumber: order.soNumber || "",
+          soDate: order.soDate ? new Date(order.soDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          customerName: order.customer?.name || "",
+          soRef: order.soRef || "",
+          status: order.status || "DRAFT",
+          notes: "",
+        })
         // Load existing items if editing
-        setItems([])
+        setItems(order.items?.map((item: any) => ({
+          id: item.id || Date.now().toString(),
+          productId: item.productId || "",
+          productName: item.productName || "",
+          description: item.description || "",
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || 0,
+          taxPercentage: item.taxPercentage || 18,
+          taxAmount: item.taxAmount || 0,
+          total: item.total || 0,
+        })) || [])
       } else {
         // Add one empty item for new order
         setItems([{
@@ -91,6 +114,8 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
           description: "",
           quantity: 1,
           unitPrice: 0,
+          taxPercentage: 18,
+          taxAmount: 0,
           total: 0,
         }])
       }
@@ -126,10 +151,10 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
       console.error("Failed to load products:", error)
       // Fallback mock data for demo
       setProducts([
-        { id: "1", name: "Laptop", type: "GOODS", salesPrice: 50000, hsnCode: "8471", category: "Electronics" },
-        { id: "2", name: "Consulting Service", type: "SERVICE", salesPrice: 5000, category: "Services" },
-        { id: "3", name: "Software License", type: "GOODS", salesPrice: 15000, hsnCode: "8523", category: "Software" },
-        { id: "4", name: "Technical Support", type: "SERVICE", salesPrice: 2000, category: "Services" },
+        { id: "1", name: "Laptop", type: "GOODS", salesPrice: 50000, hsnCode: "8471", category: "Electronics", taxPercentage: 18 },
+        { id: "2", name: "Consulting Service", type: "SERVICE", salesPrice: 5000, category: "Services", taxPercentage: 18 },
+        { id: "3", name: "Software License", type: "GOODS", salesPrice: 15000, hsnCode: "8523", category: "Software", taxPercentage: 18 },
+        { id: "4", name: "Technical Support", type: "SERVICE", salesPrice: 2000, category: "Services", taxPercentage: 18 },
       ])
     } finally {
       setLoadingProducts(false)
@@ -144,6 +169,8 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
       description: "",
       quantity: 1,
       unitPrice: 0,
+      taxPercentage: 18,
+      taxAmount: 0,
       total: 0,
     }
     setItems([...items, newItem])
@@ -166,12 +193,19 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
           if (selectedProduct) {
             updatedItem.productName = selectedProduct.name
             updatedItem.unitPrice = selectedProduct.salesPrice
+            updatedItem.taxPercentage = selectedProduct.taxPercentage || 18
+            // Auto-fill description with product name if empty
+            if (!updatedItem.description) {
+              updatedItem.description = selectedProduct.name
+            }
           }
         }
         
-        // Calculate total when quantity or unit price changes
-        if (field === 'quantity' || field === 'unitPrice' || field === 'productId') {
-          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice
+        // Calculate tax and total when quantity, unit price, tax percentage, or product changes
+        if (field === 'quantity' || field === 'unitPrice' || field === 'taxPercentage' || field === 'productId') {
+          const subtotal = parseFloat(updatedItem.quantity.toString()) * parseFloat(updatedItem.unitPrice.toString())
+          updatedItem.taxAmount = (subtotal * parseFloat(updatedItem.taxPercentage.toString())) / 100
+          updatedItem.total = subtotal + updatedItem.taxAmount
         }
         
         return updatedItem
@@ -181,8 +215,8 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
   }
 
   const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0)
-    const taxAmount = subtotal * 0.18 // 18% GST
+    const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.quantity.toString()) * parseFloat(item.unitPrice.toString())), 0)
+    const taxAmount = items.reduce((sum, item) => sum + parseFloat(item.taxAmount.toString()), 0)
     const total = subtotal + taxAmount
     return { subtotal, taxAmount, total }
   }
@@ -265,6 +299,8 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
       description: "",
       quantity: 1,
       unitPrice: 0,
+      taxPercentage: 18,
+      taxAmount: 0,
       total: 0,
     }])
   }
@@ -364,7 +400,7 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
             </div>
             <div className="space-y-2">
               {items.map((item, index) => (
-                <div key={item.id} className="grid grid-cols-7 gap-2 items-end">
+                <div key={item.id} className="grid grid-cols-8 gap-2 items-end">
                   <div className="col-span-2">
                     <Label>Product</Label>
                     <Select
@@ -403,16 +439,49 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
                   </div>
                   <div>
                     <Label>Unit Price</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                    />
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unitPrice}
+                        onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                        className={item.productId ? "bg-blue-50 border-blue-200" : ""}
+                        placeholder="0.00"
+                      />
+                      {item.productId && (
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                          <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                            Auto
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Tax %</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={item.taxPercentage}
+                        onChange={(e) => updateItem(item.id, 'taxPercentage', parseFloat(e.target.value) || 0)}
+                        className={item.productId ? "bg-green-50 border-green-200" : ""}
+                        placeholder="18"
+                      />
+                      {item.productId && (
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                          <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                            Auto
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center">
-                    <span className="text-sm font-medium">₹{item.total.toFixed(2)}</span>
+                    <span className="text-sm font-medium">₹{parseFloat(item.total.toString()).toFixed(2)}</span>
                     {items.length > 1 && (
                       <Button
                         type="button"
@@ -444,15 +513,15 @@ export function SalesOrderForm({ isOpen, onClose, onSuccess, order }: SalesOrder
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>₹{subtotal.toFixed(2)}</span>
+              <span>₹{parseFloat(subtotal.toString()).toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Tax (18%):</span>
-              <span>₹{taxAmount.toFixed(2)}</span>
+              <span>₹{parseFloat(taxAmount.toString()).toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-bold text-lg border-t pt-2">
               <span>Total:</span>
-              <span>₹{total.toFixed(2)}</span>
+              <span>₹{parseFloat(total.toString()).toFixed(2)}</span>
             </div>
           </div>
 
