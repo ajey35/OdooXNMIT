@@ -13,14 +13,14 @@ A comprehensive, full-stack accounting and ERP system built with modern technolo
 - **User Management**: Role-based access control with authentication
 
 ### Key Features
-- 📊 **Real-time Dashboard** with dynamic charts and statistics
-- 🔐 **Secure Authentication** with JWT tokens and OTP verification
-- 📱 **Responsive Design** optimized for all devices
-- 🎨 **Modern UI/UX** built with Tailwind CSS and Radix UI
-- 📈 **Advanced Reporting** with export and print functionality
-- 🔄 **Auto-generated Numbers** for orders and invoices
-- 💰 **Tax Management** with GST integration
-- 📋 **Data Tables** with filtering, searching, and sorting
+- *Real-time Dashboard** with dynamic charts and statistics
+- **Secure Authentication** with JWT tokens and OTP verification
+-  **Responsive Design** optimized for all devices
+-  **Modern UI/UX** built with Tailwind CSS and Radix UI
+-  **Advanced Reporting** with export and print functionality
+-  **Auto-generated Numbers** for orders and invoices
+-  **Tax Management** with GST integration
+-  **Data Tables** with filtering, searching, and sorting
 
 ## 🏗️ Architecture
 
