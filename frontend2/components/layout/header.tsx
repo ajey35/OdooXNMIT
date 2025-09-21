@@ -54,8 +54,11 @@ export function Header({ title, children, onMenuClick }: HeaderProps) {
         router.push("/settings")
         break
       case "logout":
-        logout()
-        router.push("/auth/login")
+        console.log("Logging out from header")
+        logout().then(() => {
+          // Use replace instead of push to prevent back navigation to authenticated pages
+          router.replace("/auth/login")
+        })
         break
     }
   }

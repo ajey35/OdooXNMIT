@@ -124,6 +124,12 @@ class ApiClient {
     })
   }
 
+  async logout() {
+    return this.request<{ message: string }>("/auth/logout", {
+      method: "POST",
+    })
+  }
+
   // Contacts endpoints
   async getContacts(params?: {
     page?: number
@@ -440,6 +446,98 @@ class ApiClient {
     return this.request<any>(`/customer-invoices/${id}`, {
       method: "DELETE",
     })
+  }
+
+  // Payment endpoints
+  async getBillPayments(params?: {
+    page?: number
+    limit?: number
+    vendorId?: string
+    paymentMethod?: string
+    search?: string
+  }) {
+    const searchParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, value.toString())
+        }
+      })
+    }
+    return this.request<any[]>(`/payments/bill-payments?${searchParams}`)
+  }
+
+  async createBillPayment(paymentData: any) {
+    return this.request<any>("/payments/bill-payments", {
+      method: "POST",
+      body: JSON.stringify(paymentData),
+    })
+  }
+
+  async updateBillPayment(id: string, paymentData: any) {
+    return this.request<any>(`/payments/bill-payments/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(paymentData),
+    })
+  }
+
+  async deleteBillPayment(id: string) {
+    return this.request<any>(`/payments/bill-payments/${id}`, {
+      method: "DELETE",
+    })
+  }
+
+  async getInvoicePayments(params?: {
+    page?: number
+    limit?: number
+    customerId?: string
+    paymentMethod?: string
+    search?: string
+  }) {
+    const searchParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, value.toString())
+        }
+      })
+    }
+    return this.request<any[]>(`/payments/invoice-payments?${searchParams}`)
+  }
+
+  async createInvoicePayment(paymentData: any) {
+    return this.request<any>("/payments/invoice-payments", {
+      method: "POST",
+      body: JSON.stringify(paymentData),
+    })
+  }
+
+  async getPaymentsByDateRange(startDate: string, endDate: string, type?: string) {
+    const params = new URLSearchParams({
+      startDate,
+      endDate,
+      ...(type && { type }),
+    })
+    return this.request<any>(`/payments/by-date-range?${params}`)
+  }
+
+  async getPaymentStats() {
+    return this.request<any>("/payments/stats")
+  }
+
+  // Additional Reports endpoints
+  async getStockStatement(productId?: string) {
+    const params = productId ? `?productId=${productId}` : ""
+    return this.request<any>(`/reports/stock-statement${params}`)
+  }
+
+  async getPartnerLedger(contactId?: string, startDate?: string, endDate?: string) {
+    const searchParams = new URLSearchParams()
+    if (contactId) searchParams.append("contactId", contactId)
+    if (startDate) searchParams.append("startDate", startDate)
+    if (endDate) searchParams.append("endDate", endDate)
+    const params = searchParams.toString() ? `?${searchParams}` : ""
+    return this.request<any>(`/reports/partner-ledger${params}`)
   }
 }
 

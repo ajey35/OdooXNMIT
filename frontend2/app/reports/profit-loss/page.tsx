@@ -29,7 +29,6 @@ interface ProfitLossData {
   }
   grossProfit: number
   netProfit: number
-  profitMargin: number
 }
 
 export default function ProfitLossPage() {
@@ -81,7 +80,6 @@ export default function ProfitLossPage() {
         },
         grossProfit: 575000,
         netProfit: 250000,
-        profitMargin: 24.39,
       })
     } finally {
       setLoading(false)
@@ -94,6 +92,41 @@ export default function ProfitLossPage() {
       currency: "INR",
       minimumFractionDigits: 0,
     }).format(amount)
+  }
+
+  const handlePrint = () => {
+    window.print()
+  }
+
+  const handleExport = () => {
+    if (!profitLoss) return
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      "Category,Item,Amount\n" +
+      profitLoss.income.items.flatMap(item => 
+        item.children ? 
+          item.children.map(child => `Income,${child.name},${child.amount}`) :
+          [`Income,${item.name},${item.amount}`]
+      ).concat(
+        profitLoss.expenses.items.flatMap(item => 
+          item.children ? 
+            item.children.map(child => `Expenses,${child.name},${child.amount}`) :
+            [`Expenses,${item.name},${item.amount}`]
+        )
+      ).concat([
+        `Income,Total Income,${profitLoss.income.total}`,
+        `Expenses,Total Expenses,${profitLoss.expenses.total}`,
+        `Net,Net Profit,${profitLoss.netProfit}`,
+      ]).join("\n")
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", "profit_loss_statement.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const renderProfitLossSection = (title: string, items: ProfitLossItem[], total: number, isExpense = false) => (
@@ -134,11 +167,11 @@ export default function ProfitLossPage() {
       title="Profit & Loss Statement"
       headerActions={
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer className="mr-2 h-4 w-4" />
             Print
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={!profitLoss}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -226,7 +259,9 @@ export default function ProfitLossPage() {
                   >
                     {formatCurrency(profitLoss.netProfit)}
                   </div>
-                  <p className="text-xs text-muted-foreground">{profitLoss.profitMargin.toFixed(2)}% profit margin</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(profitLoss.income.total > 0 ? ((profitLoss.netProfit / profitLoss.income.total) * 100) : 0).toFixed(2)}% profit margin
+                  </p>
                 </CardContent>
               </Card>
             </div>

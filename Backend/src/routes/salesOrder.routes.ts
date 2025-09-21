@@ -159,16 +159,18 @@ router.get('/:id', authenticate, async (req, res) => {
 // @desc    Create new sales order
 // @route   POST /api/sales-orders
 // @access  Private
-router.post('/', authenticate, validate([
-  body('customerId').isString().withMessage('Customer ID is required'),
-  body('soDate').isISO8601().withMessage('SO date must be a valid date'),
-  body('soRef').optional().isString().withMessage('SO reference must be a string'),
-  body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
-  body('items.*.productId').isString().withMessage('Product ID is required'),
-  body('items.*.quantity').isDecimal({ decimal_digits: '0,2' }).withMessage('Quantity must be a valid decimal'),
-  body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
-  body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),
-]), async (req: Request, res: Response) => {
+router.post('/', authenticate, 
+  // validate([
+  // body('customerId').isString().withMessage('Customer ID is required'),
+  // body('soDate').isISO8601().withMessage('SO date must be a valid date'),
+  // body('soRef').optional().isString().withMessage('SO reference must be a string'),
+  // body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
+  // body('items.*.productId').isString().withMessage('Product ID is required'),
+  // body('items.*.quantity').isDecimal({ decimal_digits: '0,2' }).withMessage('Quantity must be a valid decimal'),
+  // body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
+  // body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),
+// ]),
+ async (req: Request, res: Response) => {
   try {
     const { customerId, soDate, soRef, items } = req.body;
 
