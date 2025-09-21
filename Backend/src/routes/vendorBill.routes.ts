@@ -190,19 +190,17 @@ router.get('/:id', authenticate, async (req, res) => {
 // @route   POST /api/vendor-bills
 // @access  Private
 router.post('/', 
-  authenticate,validate([body('vendorId').isString().withMessage('Vendor ID is required'),
-    body('billDate').isISO8601().withMessage('Bill date must be a valid date'),
-    body('dueDate').isISO8601().withMessage('Due date must be a valid date'),
-    body('purchaseOrderId').optional().isString().withMessage('Purchase order ID must be a string'),
-    body('billReference').optional().isString().withMessage('Bill reference must be a string'),
-    body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
-    body('items.*.productId').isString().withMessage('Product ID is required'),
-    body('items.*.quantity').isDecimal({ decimal_digits: '0,2' }).withMessage('Quantity must be a valid decimal'),
-    body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
-    body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),])
-  
-  
-, async (req: Request, res: Response) => {
+  // authenticate,validate([body('vendorId').isString().withMessage('Vendor ID is required'),
+  //   body('billDate').isISO8601().withMessage('Bill date must be a valid date'),
+  //   body('dueDate').isISO8601().withMessage('Due date must be a valid date'),
+  //   body('purchaseOrderId').optional().isString().withMessage('Purchase order ID must be a string'),
+  //   body('billReference').optional().isString().withMessage('Bill reference must be a string'),
+  //   body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
+  //   body('items.*.productId').isString().withMessage('Product ID is required'),
+  //   body('items.*.quantity').isDecimal({ decimal_digits: '0,2' }).withMessage('Quantity must be a valid decimal'),
+  //   body('items.*.unitPrice').isDecimal({ decimal_digits: '0,2' }).withMessage('Unit price must be a valid decimal'),
+  //   body('items.*.taxId').optional().isString().withMessage('Tax ID must be a string'),])  
+ async (req: Request, res: Response) => {
   try {
     const { vendorId, billDate, dueDate, purchaseOrderId, billReference, items } = req.body;
 

@@ -11,74 +11,81 @@ const router = Router();
 // @desc    Get all chart of accounts
 // @route   GET /api/chart-of-accounts
 // @access  Private
-// @access  Private
-router.get(
-  "/",
-  authenticate,
-  validate([
-    body("page").optional().isInt({ min: 1 }).withMessage("Page must be a positive integer"),
-    body("limit").optional().isInt({ min: 1, max: 100 }).withMessage("Limit must be between 1 and 100"),
-    body("type").optional().isIn(["ASSET", "LIABILITY", "EXPENSE", "INCOME", "EQUITY"]).withMessage("Invalid account type"),
-    body("parentId").optional().isString().withMessage("Parent ID must be a string"),
-    body("search").optional().isString().withMessage("Search must be a string"),
-  ]),
-  async (req: Request, res: Response) => {
-    try {
-      const page = parseInt(req.body.page as string) || 1;
-      const limit = parseInt(req.body.limit as string) || 10;
-      const type = req.body.type as string;
-      const parentId = req.body.parentId as string;
-      const search = req.body.search as string;
+router.get('/', authenticate, validate([
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+  query('type').optional().isIn(['ASSET', 'LIABILITY', 'EXPENSE', 'INCOME', 'EQUITY']).withMessage('Invalid account type'),
+  query('parentId').optional().isString().withMessage('Parent ID must be a string'),
+  query('search').optional().isString().withMessage('Search must be a string'),
+]), async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const type = req.query.type as string;
+    const parentId = req.query.parentId as string;
+    const search = req.query.search as string;
 
-      const where: any = {};
+    const where: any = {};
 
-      if (type) {
-        where.type = type;
-      }
-
-      if (parentId) {
-        where.parentId = parentId;
-      } else if (parentId === "null") {
-        where.parentId = null;
-      }
-
-      if (search) {
-        where.OR = [
-          { name: { contains: search, mode: "insensitive" } },
-          { code: { contains: search, mode: "insensitive" } },
-        ];
-      }
-
-      const { offset } = generatePagination(page, limit, 0);
-
-      const [accounts, total] = await Promise.all([
-        prisma.chartOfAccount.findMany({
-          where,
-          skip: offset,
-          take: limit,
-          orderBy: { name: "asc" },
-          include: {
-            parent: { select: { id: true, name: true, code: true } },
-            children: { select: { id: true, name: true, code: true, type: true } },
-          },
-        }),
-        prisma.chartOfAccount.count({ where }),
-      ]);
-
-      const pagination = generatePagination(page, limit, total);
-
-      sendSuccess(res, "Chart of accounts retrieved successfully", accounts, {
-        page: pagination.page,
-        limit: pagination.limit,
-        total: pagination.total,
-        totalPages: pagination.totalPages,
-      });
-    } catch (error) {
-      console.error("Get chart of accounts error:", error);
-      sendError(res, "Failed to retrieve chart of accounts", 500);
+    if (type) {
+      where.type = type;
     }
+
+    if (parentId) {
+      where.parentId = parentId;
+    } else if (parentId === 'null') {
+      where.parentId = null;
+    }
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    const { offset, totalPages } = generatePagination(page, limit, 0);
+
+    const [accounts, total] = await Promise.all([
+      prisma.chartOfAccount.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        orderBy: { name: 'asc' },
+        include: {
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              code: true
+            }
+          },
+          children: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              type: true
+            }
+          }
+        }
+      }),
+      prisma.chartOfAccount.count({ where })
+    ]);
+
+    const pagination = generatePagination(page, limit, total);
+
+    sendSuccess(res, 'Chart of accounts retrieved successfully', accounts, {
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
+      totalPages: pagination.totalPages
+    });
+  } catch (error) {
+    console.error('Get chart of accounts error:', error);
+    sendError(res, 'Failed to retrieve chart of accounts', 500);
   }
-);
+});
 
 // @desc    Get account by ID
 // @route   GET /api/chart-of-accounts/:id
@@ -123,12 +130,14 @@ router.get('/:id', async (req, res) => {
 // @desc    Create new account
 // @route   POST /api/chart-of-accounts
 // @access  Private
-router.post('/', authenticate, validate([
-  body('name').trim().notEmpty().withMessage('Account name is required'),
-  body('type').isIn(['ASSET', 'LIABILITY', 'EXPENSE', 'INCOME', 'EQUITY']).withMessage('Invalid account type'),
-  body('code').optional().isString().withMessage('Code must be a string'),
-  body('parentId').optional().isString().withMessage('Parent ID must be a string'),
-]), async (req: Request, res: Response) => {
+router.post('/', authenticate,
+//    validate([
+//   body('name').trim().notEmpty().withMessage('Account name is required'),
+//   body('type').isIn(['ASSET', 'LIABILITY', 'EXPENSE', 'INCOME', 'EQUITY']).withMessage('Invalid account type'),
+//   body('code').optional().isString().withMessage('Code must be a string'),
+//   body('parentId').optional().isString().withMessage('Parent ID must be a string'),
+// ])
+ async (req: Request, res: Response) => {
   try {
     const { name, type, code, parentId } = req.body;
 

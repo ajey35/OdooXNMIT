@@ -8,6 +8,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Plus, Edit, Trash2, CreditCard } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { apiClient } from "../../../lib/api"
+import { VendorBillForm } from "../../../components/forms/vendor-bill-form"
 
 interface VendorBill {
   id: string
@@ -23,7 +24,7 @@ interface VendorBill {
   createdAt: string
 }
 
-const columns: ColumnDef<VendorBill>[] = [
+const createColumns = (handleEditBill: (bill: VendorBill) => void): ColumnDef<VendorBill>[] => [
   {
     accessorKey: "billNumber",
     header: "Bill Number",
@@ -77,7 +78,7 @@ const columns: ColumnDef<VendorBill>[] = [
               <CreditCard className="h-4 w-4" />
             </Button>
           )}
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => handleEditBill(row.original)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon">
@@ -92,6 +93,8 @@ const columns: ColumnDef<VendorBill>[] = [
 export default function VendorBillsPage() {
   const [bills, setBills] = useState<VendorBill[]>([])
   const [loading, setLoading] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingBill, setEditingBill] = useState<VendorBill | null>(null)
 
   useEffect(() => {
     loadBills()
@@ -137,11 +140,30 @@ export default function VendorBillsPage() {
     }
   }
 
+  const handleNewBill = () => {
+    setEditingBill(null)
+    setIsFormOpen(true)
+  }
+
+  const handleEditBill = (bill: VendorBill) => {
+    setEditingBill(bill)
+    setIsFormOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    loadBills()
+  }
+
+  const handleFormClose = () => {
+    setIsFormOpen(false)
+    setEditingBill(null)
+  }
+
   return (
     <DashboardLayout
       title="Vendor Bills"
       headerActions={
-        <Button>
+        <Button onClick={handleNewBill}>
           <Plus className="mr-2 h-4 w-4" />
           New Vendor Bill
         </Button>
@@ -156,9 +178,16 @@ export default function VendorBillsPage() {
             </div>
           </div>
         ) : (
-          <DataTable columns={columns} data={bills} searchKey="billNumber" searchPlaceholder="Search vendor bills..." />
+          <DataTable columns={createColumns(handleEditBill)} data={bills} searchKey="billNumber" searchPlaceholder="Search vendor bills..." />
         )}
       </div>
+      
+      <VendorBillForm
+        isOpen={isFormOpen}
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+        bill={editingBill}
+      />
     </DashboardLayout>
   )
 }
